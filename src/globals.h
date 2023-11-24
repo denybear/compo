@@ -1,0 +1,48 @@
+/** @file globals.h
+ *
+ * @brief This file the global variables for the program
+ *
+ */
+
+// global variables
+// define midi ports
+extern jack_port_t *midi_UI_in, *midi_UI_out;
+extern jack_port_t *midi_KBD_in, *midi_KBD_out;
+extern jack_port_t *midi_out;
+
+// define JACKD client : this is this program
+extern jack_client_t *client;
+
+// number of frames per Jack packet and sample-rate
+extern uint32_t nb_frames_per_packet, sample_rate;
+
+// determine if midi clock shall be sent or not
+extern int send_clock;
+
+// define filename structure for each file name: midi file and SF2 file
+extern filename_t filename [];
+// define function structure
+extern filefunct_t filefunct [];
+
+// define the structures for managing leds of midi control surface
+extern unsigned char list_buffer[LIST_ELT][4];	// list buffer of LIST_ELT led request
+extern unsigned char list_index;			// index where to write led request to
+
+// status of leds for filenames
+extern unsigned char led_status_filename [NB_NAMES][LAST_ELT]; 	// this table will contain whether each light is on/off at a time; this is to avoid sending led requests which are not required
+extern unsigned char led_status_filefunct [NB_FCT][LAST_ELT_FCT]; 	// this table will contain whether each light is on/off at a time; this is to avoid sending led requests which are not required
+
+/* volume and BPM */
+extern int bpm;
+extern int initial_bpm;
+extern int volume;
+extern int is_volume;
+
+/* PPQ */
+extern int ppq;
+
+/* beat */
+extern uint64_t now;       // time now
+extern uint64_t previous;  // time when "beat" key was last pressed
+
+
