@@ -154,6 +154,14 @@ int process ( jack_nframes_t nframes, void *arg )
 
 // process callback called to process midi_in events in realtime
 int midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
-
-
 }
+
+
+// time callback called at after "process" callback, and used to compute BBT
+void timebbt (jack_transport_state_t state, jack_nframes_t nframes, jack_position_t *pos, int new_pos, void *arg)
+{
+	if (new_pos) new_pos = 1;	// if new_pos is !=0, then force its value to 1
+	// compute BBT
+	compute_bbt (nframes, pos, new_pos);
+}
+

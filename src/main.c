@@ -109,6 +109,7 @@ int main ( int argc, char *argv[] )
 	/* assign number of frames per packet and sample rate */
 	sample_rate = jack_get_sample_rate(client);
 	nb_frames_per_packet =  jack_get_buffer_size(client);
+	time_position.frame_rate = sample_rate;			// set frame rate to the BBT structure used by compo
 
 	/* set callback function to process jack events */
 	jack_set_process_callback ( client, process, 0 );
@@ -164,6 +165,13 @@ int main ( int argc, char *argv[] )
 		exit ( 1 );
 	}
 
+	/* set callback function to process BBT */
+	if (jack_set_timebase_callback(client, 0, timebbt, NULL) != 0) {
+		fprintf (stderr, "unable to take over timebase.\n");
+		// JACK client close
+		jack_client_close ( client );
+		exit ( 1 );
+	}
 
 	/* Tell the JACK server that we are ready to roll.  Our
 	 * process() callback will start running now. */

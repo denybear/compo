@@ -61,3 +61,68 @@ int pull_from_list (int *dest, int *row, int *col, int *on_off) {
 	return 1;
 }
 
+
+// compute BBT based on nframes, tempo (BPM), frame rate, etc.
+// based on new_pos value:
+// 0 : compute BBT based on previous values of BBT & fram rate
+// 1 : compute BBT based on start of Jack
+// 2 : compute BBT, and sets position as 1, 1, 1
+// requires jack_position_t * which will contain the BBT information
+void compute_bbt (jack_nframes_t nframes, jack_position_t *pos, int new_pos)
+{
+	double min;			/* minutes since frame 0 */
+	long abs_tick;		/* ticks since frame 0 */
+	long abs_beat;		/* beats since frame 0 */
+
+	if (new_pos) {
+		pos->valid = JackPositionBBT;
+		pos->beats_per_bar = time_beats_per_bar;
+		pos->beat_type = time_beat_type;
+		pos->ticks_per_beat = time_ticks_per_beat;
+		pos->beats_per_minute = time_beats_per_minute;
+
+		if (new_pos == 2) {
+			// set BBT to 1,1,1
+			pos->bar = 1;
+			pos->beat = 1;
+			pos->tick = 1;
+			pos->bar_start_tick = 1;
+		}
+		else {
+
+			/* Compute BBT info from frame number.  This is
+			 * relatively simple here, but would become complex if
+			 * we supported tempo or time signature changes at
+			 * specific locations in the transport timeline.  I
+			 * make no claims for the numerical accuracy or
+			 * efficiency of these calculations. */
+
+			min = pos->frame / ((double) pos->frame_rate * 60.0);
+			abs_tick = min * pos->beats_per_minute * pos->ticks_per_beat;
+			abs_beat = abs_tick / pos->ticks_per_beat;
+
+			pos->bar = abs_beat / pos->beats_per_bar;
+			pos->beat = abs_beat - (pos->bar * pos->beats_per_bar) + 1;
+			pos->tick = abs_tick - (abs_beat * pos->ticks_per_beat);
+			pos->bar_start_tick = pos->bar * pos->beats_per_bar * pos->ticks_per_beat;
+			pos->bar++;		/* adjust start to bar 1 */
+		}
+	}
+	else {
+
+		/* Compute BBT info based on previous period. */
+		pos->tick += (nframes * pos->ticks_per_beat * pos->beats_per_minute / (pos->frame_rate * 60));
+
+		while (pos->tick >= pos->ticks_per_beat) {
+			pos->tick -= pos->ticks_per_beat;
+			if (++pos->beat > pos->beats_per_bar) {
+				pos->beat = 1;
+				++pos->bar;
+				pos->bar_start_tick += (pos->beats_per_bar * pos->ticks_per_beat);
+			}
+		}
+	}
+printf ("%d, %d, %d, %d\n", pos->bar, pos->beat, pos->tick, pos->frame_rate);
+}
+
+
