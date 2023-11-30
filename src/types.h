@@ -21,6 +21,31 @@
 
 
 /* constants */
+// colors used by Novation Launchpad mini
+#define BLACK		0x0C
+#define LO_RED		0x0D
+#define HI_RED		0x0F
+#define LO_AMBER	0x1D
+#define HI_AMBER	0x3F
+#define LO_GREEN	0x1C
+#define HI_GREEN	0x3C
+#define LO_ORANGE	0x1E
+#define HI_ORANGE	0x2F
+#define LO_YELLOW	0x2D
+#define HI_YELLOW	0x3E
+
+
+#define MIDI_NOTEON		0x90
+#define MIDI_NOTEOFF	0x80
+#define MIDI_CC			0xB0
+
+/* define status, etc */
+#define UI	0
+#define KBD 1
+
+
+
+
 #define MIDI_CLOCK 0xF8
 #define MIDI_RESERVED 0xF9
 #define MIDI_PLAY 0xFA

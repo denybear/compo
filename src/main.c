@@ -23,7 +23,17 @@ static void init_globals ( )
 	/* INIT SOME GLOBAL VARIABLES */
 	/******************************/
 
-
+	// fill UI structures with start values to set up leds
+	memset (ui_instruments, LO_GREEN, 8);
+	memset (ui_pages, LO_GREEN, 8);
+	memset (ui_bars, BLACK, 8 * 8 * 64);
+	// set cursor to 1st instrument, 1st page, 1st bar
+	ui_current_instrument = 0;
+	ui_current_page = 0;
+	ui_current_bar = 0;
+	ui_instruments [0] = HI_GREEN;
+	ui_pages [0] = HI_GREEN;
+	ui_bars [0] [0] [0] = HI_GREEN;
 }
 
 
@@ -208,7 +218,7 @@ int main ( int argc, char *argv[] )
 	if ( jack_connect ( client, "compo.a:midi_UI_out", "a2j:Launchpad Mini (playback): Launchpad Mini MIDI 1") ) {
 			fprintf ( stderr, "cannot connect ports (between client and server).\n" );
 	}
-	if ( jack_connect ( client, "a2j:MPK Mini Mk II (capture): MPK Mini Mk II MIDI 1", "compo.a:midi_KBD_in") ) {
+/*	if ( jack_connect ( client, "a2j:MPK Mini Mk II (capture): MPK Mini Mk II MIDI 1", "compo.a:midi_KBD_in") ) {
 			fprintf ( stderr, "cannot connect ports (between client and server).\n" );
 	}
 	if ( jack_connect ( client, "compo.a:midi_KBD_out", "a2j:MPK Mini Mk II (playback): MPK Mini Mk II MIDI 1") ) {
@@ -217,6 +227,13 @@ int main ( int argc, char *argv[] )
 	if ( jack_connect ( client, "compo.a:midi_out", "qsynth:midi_00") ) {
 			fprintf ( stderr, "cannot connect ports (between client and server).\n" );
 	}
+*/
+
+	// light leds on the UI
+	led_ui_instruments ();
+	led_ui_pages ();
+	led_ui_bars (ui_current_instrument, ui_current_page);
+
 
 
 

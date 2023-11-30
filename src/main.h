@@ -29,6 +29,24 @@ jack_client_t *client;
 // number of frames per Jack packet and sample-rate
 uint32_t nb_frames_per_packet, sample_rate;
 
+// tables required for UI
+uint8_t ui_instruments [8];		// state of ui for instrument pads
+uint8_t ui_pages [8];			// state of ui for pages pads
+uint8_t ui_bars [8][8][64];		// state of ui for bar: 64 bar per page, 8 pages, 8 instruments
+int ui_current_instrument;		// instrument currently selected
+int ui_current_page;			// page currently selected
+int ui_current_bar;				// bar currently selected
+
+// define the structures for managing midi out (ie. lists)
+uint8_t ui_list [LIST_ELT] [3];		// midi out buffer for UI
+int ui_list_index;				// index in the list
+uint8_t kbd_list [LIST_ELT] [3];		// midi out buffer for KBD
+int kbd_list_index;				// index in the list
+
+
+
+
+
 // determine if midi clock shall be sent or not
 int send_clock = NO_CLOCK;
 
@@ -36,10 +54,6 @@ int send_clock = NO_CLOCK;
 filename_t filename [NB_NAMES];
 // define function structure
 filefunct_t filefunct [NB_FCT];
-
-// define the structures for managing leds of midi control surface
-unsigned char list_buffer[LIST_ELT][4];	// list buffer of LIST_ELT led request
-unsigned char list_index;			// index where to write led request to
 
 // status of leds for filenames
 unsigned char led_status_filename [NB_NAMES][LAST_ELT]; 	// this table will contain whether each light is on/off at a time; this is to avoid sending led requests which are not required

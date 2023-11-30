@@ -4,6 +4,12 @@
  *
  */
 
+void led_ui_instruments ();
+void led_ui_pages ();
+void led_ui_bars (int, int);
+void led_ui_bar (int, int, int);
+
+
 int led_filename (int, int, int);
 int filename_led_off (int);
 int led_filefunct (int, int, int);

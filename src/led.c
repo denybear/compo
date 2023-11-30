@@ -11,6 +11,63 @@
 #include "led.h"
 
 
+// light the "instruments" row of leds
+void led_ui_instruments () {
+	int i;
+	uint8_t buffer [4];
+
+	buffer [0] = MIDI_CC;
+	for (i=0; i<8; i++) {
+		buffer [1] = i + 0x68;
+		buffer [2] = ui_instruments [i];
+		push_to_list (UI, buffer);			// put in midisend buffer
+	}
+}
+
+// light the "pages" row of leds
+void led_ui_pages () {
+	int i;
+	uint8_t buffer [4];
+
+	buffer [0] = MIDI_NOTEON;
+	for (i=0; i<8; i++) {
+		buffer [1] = (i * 0x10) + 0x8;
+		buffer [2] = ui_pages [i];
+		push_to_list (UI, buffer);			// put in midisend buffer
+	}
+}
+
+// light the "bars" table of leds
+void led_ui_bars (int instr, int page) {
+	int i, j;
+	uint8_t buffer [4];
+
+	buffer [0] = MIDI_NOTEON;
+	for (i=0; i<8; i++) {
+		for (j=0; j<8; j++) {
+			buffer [1] = (i * 0x10) + j;
+			buffer [2] = ui_bars [instr][page][(i * 8) + j];
+			push_to_list (UI, buffer);		// put in midisend buffer
+		}
+	}
+}
+
+// light a single bar led, according to its value in the table
+void led_ui_bar (int instr, int page, int bar) {
+
+	uint8_t buffer [4];
+
+	buffer [0] = MIDI_NOTEON;
+	buffer [1] = bar2midi (bar);
+	buffer [2] = ui_bars [instr][page][bar];
+	push_to_list (UI, buffer);		// put in midisend buffer
+}
+
+
+
+
+
+
 // function called to turn pad led on/off for a given row/col for filename
 int led_filename (int row, int col, int on_off) {
 
@@ -19,7 +76,7 @@ int led_filename (int row, int col, int on_off) {
 	if (led_status_filename [row][col] != on_off) {
 
 		// push to list of led requests to be processed
-		push_to_list (NAMES, row, col, on_off);
+		//push_to_list (NAMES, row, col, on_off);
 		// update led status so it matches with request
 		led_status_filename [row][col] = (unsigned char) on_off;
 
@@ -35,7 +92,7 @@ int led_filefunct (int row, int col, int on_off) {
 	if (led_status_filefunct [row][col] != on_off) {
 		
 		// push to list of led requests to be processed
-		push_to_list (FCT, row, col, on_off);
+		//push_to_list (FCT, row, col, on_off);
 		// update led status so it matches with request
 		led_status_filefunct [row][col] = (unsigned char) on_off;
 
