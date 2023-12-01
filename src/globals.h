@@ -40,6 +40,11 @@ extern int ui_list_index;		// index in the list
 extern uint8_t kbd_list [][3];	// midi out buffer for KBD
 extern int kbd_list_index;	// index in the list
 
+// select functionality
+extern int ui_first_selected_bar;
+extern int ui_last_selected_bar;
+extern int ui_select_in_progress;
+
 
 
 

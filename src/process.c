@@ -124,19 +124,138 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 // process callback called to process midi_in events from UI in realtime
 int ui_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 
-	int key, vel;
+	int i;
+	int cmd, key, vel;
+	int temp;
 
-	key = event->buffer [0];
-	vel = event->buffer [1];
+	cmd = event->buffer [0];
+	key = event->buffer [1];
+	vel = event->buffer [2];
 
 	// check which event has been received
-	switch (key) {
-		case MIDI_NOTEON:
-				vel = midi2bar (vel);	// convert pad number to position in table
-				ui_bars [ui_current_instrument][ui_current_page][vel] = HI_RED;
-				ui_current_bar = vel;
-				led_ui_bar (ui_current_instrument, ui_current_page, ui_current_bar);
+	switch (cmd) {
+		case MIDI_CC:
+			// an "instrument" pad has been pressed
+			// do any work only if "press on", not "press off" (release of the pad)
+			if (!vel) break;
+
+			key = key - 0x68;		// get pad number from midi message
+
+			// set color according to previous color of the pad (green = not muted; red = muted)
+			switch (ui_instruments [key]) {
+				case HI_GREEN:
+					// the pad was selected before; next move is put to red (mute)
+					ui_instruments [key] = HI_RED;
+					break;
+				case HI_RED:
+					// the pad was selected before but was muted; next move is put to hi green (active)
+					ui_instruments [key] = HI_GREEN;
+					break;
+				case LO_GREEN:
+					// the pad was not selected before; next move is put to hi green (active)
+					ui_instruments [key] = HI_GREEN;
+					break;
+				case LO_RED:
+					// the pad was not selected before but was muted; next move is put to hi red (active but muted)
+					ui_instruments [key] = HI_RED;
+					break;
+				default:
+					break;
+			}
+
+			// unlight previous pad, if previous pad is different from pressed pad
+			if (key != ui_current_instrument) {
+				// set new color according to previous color... we could put more colors here !
+				if (ui_instruments [ui_current_instrument] == HI_GREEN) ui_instruments [ui_current_instrument] = LO_GREEN;
+				else ui_instruments [ui_current_instrument] = LO_RED;
+				// unlight previous pad
+				led_ui_instrument (ui_current_instrument);
+			}
+			
+			// light new pad
+			ui_current_instrument = key;		// ui_current_instrument is set to new pad
+			led_ui_instrument (ui_current_instrument);
+
+			// display a full new page of bars for this instrument
+			led_ui_bars (ui_current_instrument, ui_current_page);
 			break;
+
+		case MIDI_NOTEOFF:
+			// a "page" pad has been pressed
+			if ((key & 0x0F) == 0x08) {
+				// do nothing
+			}
+			// bar pad has been pressed
+			else {
+				key = midi2bar (key);	// convert pad number to position in table
+
+				// select functionality
+				if (key == ui_first_selected_bar) {
+					// we released the first pad selected
+					// selection is valid; set last selected pad if necessary
+					if (ui_last_selected_bar == -1) ui_last_selected_bar = key;
+					ui_select_in_progress = FALSE;		// selection is fully valid
+				}
+			}
+			break;
+
+		case MIDI_NOTEON:
+			// a "page" pad has been pressed
+			if ((key & 0x0F) == 0x08) {
+				key = (key & 0xF0) >> 4;
+				// do some work only if pressed pad is different from previous
+				if (key != ui_current_page) {
+					// unlight previous pad 
+					ui_pages [ui_current_page] = LO_GREEN;
+					led_ui_page (ui_current_page);
+				
+					// light new pad
+					ui_current_page = key;		// ui_current_page is set to new pad
+					ui_pages [ui_current_page] = HI_GREEN;
+					led_ui_page (ui_current_page);
+
+					// display a full new page of bars for this instrument
+					led_ui_bars (ui_current_instrument, ui_current_page);
+				}
+			}
+			// bar pad has been pressed
+			else {
+				key = midi2bar (key);	// convert pad number to position in table
+
+				// check whether we are in the middle of a selection or it selection is done
+
+				if (!ui_select_in_progress) {
+					// no select operation is in progress: pressed pad is going to be the starting point of selection 
+					// start selection : set 1st selected bar
+					ui_first_selected_bar = key;
+					ui_current_bar = key;
+					ui_select_in_progress = FALSE;
+					// light on
+					// SAVE PREVIOUS LIGHT !!!
+					ui_bars [ui_current_instrument][ui_current_page][key] = HI_GREEN;
+					led_ui_bar (ui_current_instrument, ui_current_page, key);
+				}
+				else {
+					// seelction in progress : pressed pad is going to be the end point of selection
+					ui_last_selected_bar = key;
+					// light on
+					// SAVE PREVIOUS LIGHT !!!
+					// attention si la selection est faite à l'envers !!!
+						for (i=ui_first_selected_bar ; i < ui_last_selected_bar; i++) {
+							ui_bars [ui_current_instrument][ui_current_page][i] = HI_GREEN;
+							led_ui_bar (ui_current_instrument, ui_current_page, i);
+						}
+				}
+
+
+
+
+				ui_bars [ui_current_instrument][ui_current_page][key] = HI_RED;
+				ui_current_bar = key;
+				led_ui_bar (ui_current_instrument, ui_current_page, ui_current_bar);
+			}
+			break;
+
 		default:
 			break;
 	}

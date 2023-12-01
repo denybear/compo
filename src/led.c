@@ -31,7 +31,7 @@ void led_ui_pages () {
 
 	buffer [0] = MIDI_NOTEON;
 	for (i=0; i<8; i++) {
-		buffer [1] = (i * 0x10) + 0x8;
+		buffer [1] = (i << 4) + 0x8;
 		buffer [2] = ui_pages [i];
 		push_to_list (UI, buffer);			// put in midisend buffer
 	}
@@ -45,7 +45,7 @@ void led_ui_bars (int instr, int page) {
 	buffer [0] = MIDI_NOTEON;
 	for (i=0; i<8; i++) {
 		for (j=0; j<8; j++) {
-			buffer [1] = (i * 0x10) + j;
+			buffer [1] = (i << 4) + j;
 			buffer [2] = ui_bars [instr][page][(i * 8) + j];
 			push_to_list (UI, buffer);		// put in midisend buffer
 		}
@@ -63,6 +63,27 @@ void led_ui_bar (int instr, int page, int bar) {
 	push_to_list (UI, buffer);		// put in midisend buffer
 }
 
+// light a single instrument
+void led_ui_instrument (int instr) {
+
+	uint8_t buffer [4];
+
+	buffer [0] = MIDI_CC;
+	buffer [1] = instr + 0x68;
+	buffer [2] = ui_instruments [instr];
+	push_to_list (UI, buffer);			// put in midisend buffer
+}
+
+// light a single page
+void led_ui_page (int page) {
+
+	uint8_t buffer [4];
+
+	buffer [0] = MIDI_NOTEON;
+	buffer [1] = (page << 4) + 0x08;
+	buffer [2] = ui_pages [page];
+	push_to_list (UI, buffer);			// put in midisend buffer
+}
 
 
 
