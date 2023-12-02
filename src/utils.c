@@ -54,7 +54,8 @@ int push_to_list (int device, uint8_t * buffer) {
 			ui_list [ui_list_index] [i] = buffer [i];
 		}
 		// increment index and check boundaries
-		ui_list_index = (ui_list_index >= (LIST_ELT-1)) ? 0 : ui_list_index+1;
+		if (ui_list_index >= (LIST_ELT-1)) ui_list_index = 0;
+		else ui_list_index++;
 	}
 	else {
 		for (i = 0; i < 3; i++) {
@@ -62,7 +63,8 @@ int push_to_list (int device, uint8_t * buffer) {
 			kbd_list [kbd_list_index] [i] = buffer [i];
 		}
 		// increment index and check boundaries
-		kbd_list_index = (kbd_list_index >= (LIST_ELT-1)) ? 0 : kbd_list_index+1;
+		if (kbd_list_index >= (LIST_ELT-1)) kbd_list_index = 0;
+		else kbd_list_index++;
 	}
 }
 
@@ -85,7 +87,6 @@ int pull_from_list (int device, uint8_t * buffer) {
 		}
 		// decrement index
 		ui_list_index--;
-
 		// move the rest of the list 1 item backwards
 		memmove (&ui_list [0][0], &ui_list [1][0], ui_list_index * 3);
 	}
@@ -101,7 +102,6 @@ int pull_from_list (int device, uint8_t * buffer) {
 
 		// decrement index
 		kbd_list_index--;
-
 		// move the rest of the list 1 item backwards
 		memmove (&kbd_list [0][0], &kbd_list [1][0], kbd_list_index * 3);
 	}

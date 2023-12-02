@@ -44,8 +44,6 @@ static void init_globals ( )
 	ui_limit2 = ui_current_bar;
 	ui_limit1_pressed = FALSE;
 	ui_limit2_pressed = FALSE;
-	// display between limit 1 and 2
-	ui_current_bar = led_ui_select (ui_limit1, ui_limit2);
 }
 
 
@@ -245,7 +243,8 @@ int main ( int argc, char *argv[] )
 	led_ui_instruments ();
 	led_ui_pages ();
 	led_ui_bars (ui_current_instrument, ui_current_page);
-
+	// display between limit 1 and 2
+	ui_current_bar = led_ui_select (ui_limit1, ui_limit2);
 
 
 

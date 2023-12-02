@@ -39,9 +39,9 @@ int ui_current_bar;				// bar currently selected
 
 // define the structures for managing midi out (ie. lists)
 uint8_t ui_list [LIST_ELT] [3];		// midi out buffer for UI
-int ui_list_index;				// index in the list
-uint8_t kbd_list [LIST_ELT] [3];		// midi out buffer for KBD
-int kbd_list_index;				// index in the list
+int ui_list_index = 0;				// index in the list
+uint8_t kbd_list [LIST_ELT] [3];	// midi out buffer for KBD
+int kbd_list_index = 0;				// index in the list
 
 // select functionality
 int ui_limit1;

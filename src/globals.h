@@ -36,9 +36,9 @@ extern int ui_current_bar;				// bar currently selected
 
 // define the structures for managing midi out (ie. lists)
 extern uint8_t ui_list [][3];		// midi out buffer for UI
-extern int ui_list_index;		// index in the list
-extern uint8_t kbd_list [][3];	// midi out buffer for KBD
-extern int kbd_list_index;	// index in the list
+extern int ui_list_index;			// index in the list
+extern uint8_t kbd_list [][3];		// midi out buffer for KBD
+extern int kbd_list_index;			// index in the list
 
 // select functionality
 extern int ui_limit1;

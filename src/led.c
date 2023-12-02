@@ -52,7 +52,8 @@ void led_ui_bar (int instr, int page, int bar) {
 	uint8_t buffer [4], color;
 
 	// determine color based on bar color + selection color (in case selection is on the bar)
-	if ((ui_select [bar] == BLACK) || (ui_select [bar] == BLACK_ERASE)) color = ui_bars [instr][page][bar];
+//	if ((ui_select [bar] == BLACK) || (ui_select [bar] == BLACK_ERASE)) color = ui_bars [instr][page][bar];
+	if (ui_select [bar] == BLACK) color = ui_bars [instr][page][bar];
 	else color = ui_select [bar];
 
 	buffer [0] = MIDI_NOTEON;
@@ -112,16 +113,15 @@ uint8_t led_ui_select (int lim1, int lim2) {
 	// display on the launchpad, by analyzing current selection to be dispay vs. previous selection buffer to be displayed
 	// go from pad to pad
 	for (i=0; i<64; i++) {
-		// this pad was lit, but should now be unlit
 		if ((ui_select_previous [i] != BLACK) && (ui_select [i] == BLACK)) {
-			// special black color to indicate we have to send a midi message to erase the pad (otherwise, optim does not send message)
-			ui_select [i] = BLACK_ERASE;
-		}
-
-		// determine if the pad should be lit or not, and eventually light it
-		if (ui_select [i] != BLACK){
+			// this pad was lit, but should now be unlit
 			led_ui_bar (ui_current_instrument, ui_current_page, i);
 		}
+		if ((ui_select_previous [i] == BLACK) && (ui_select [i] == HI_GREEN)) {
+			// light pad in case it was not lit previously
+			led_ui_bar (ui_current_instrument, ui_current_page, i);
+		}
+		// in case pad was hi green previously, we do nothing (no midi msg sent) as an optimisation
 	}
 
 	// copy current select buffer into previous buffer: current becomes previous
