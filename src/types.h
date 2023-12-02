@@ -23,6 +23,7 @@
 /* constants */
 // colors used by Novation Launchpad mini
 #define BLACK		0x0C
+#define BLACK_ERASE	0x00
 #define LO_RED		0x0D
 #define HI_RED		0x0F
 #define LO_AMBER	0x1D

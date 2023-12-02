@@ -41,9 +41,13 @@ extern uint8_t kbd_list [][3];	// midi out buffer for KBD
 extern int kbd_list_index;	// index in the list
 
 // select functionality
-extern int ui_first_selected_bar;
-extern int ui_last_selected_bar;
-extern int ui_select_in_progress;
+extern int ui_limit1;
+extern int ui_limit2;
+extern int ui_limit1_pressed;
+extern int ui_limit2_pressed;
+extern uint8_t ui_select [64];				// buffer to store pads during selection process
+extern uint8_t ui_select_previous [64];		// buffer to store pads during selection process (previous selection)
+
 
 
 

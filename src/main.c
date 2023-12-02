@@ -31,9 +31,21 @@ static void init_globals ( )
 	ui_current_instrument = 0;
 	ui_current_page = 0;
 	ui_current_bar = 0;
-	ui_instruments [0] = HI_GREEN;
-	ui_pages [0] = HI_GREEN;
-	ui_bars [0] [0] [0] = HI_GREEN;
+	ui_instruments [ui_current_instrument] = HI_GREEN;
+	ui_pages [ui_current_page] = HI_GREEN;
+
+	// reset selection variables
+	// clear selection buffers
+	memset (ui_select_previous, BLACK, 64);
+	memset (ui_select, BLACK, 64);
+	// set current selection to first bar
+	ui_select [ui_current_bar] = HI_GREEN;			// cursor color is high green
+	ui_limit1 = ui_current_bar;
+	ui_limit2 = ui_current_bar;
+	ui_limit1_pressed = FALSE;
+	ui_limit2_pressed = FALSE;
+	// display between limit 1 and 2
+	ui_current_bar = led_ui_select (ui_limit1, ui_limit2);
 }
 
 

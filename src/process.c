@@ -190,11 +190,13 @@ int ui_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 				key = midi2bar (key);	// convert pad number to position in table
 
 				// select functionality
-				if (key == ui_first_selected_bar) {
+				if (key == ui_limit1) {
 					// we released the first pad selected
-					// selection is valid; set last selected pad if necessary
-					if (ui_last_selected_bar == -1) ui_last_selected_bar = key;
-					ui_select_in_progress = FALSE;		// selection is fully valid
+					ui_limit1_pressed = FALSE;		// first limit valid
+				}
+				if (key == ui_limit2) {
+					// we released the last pad selected
+					ui_limit2_pressed = FALSE;		// last bar valid
 				}
 			}
 			break;
@@ -223,36 +225,34 @@ int ui_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 				key = midi2bar (key);	// convert pad number to position in table
 
 				// check whether we are in the middle of a selection or it selection is done
-
-				if (!ui_select_in_progress) {
-					// no select operation is in progress: pressed pad is going to be the starting point of selection 
-					// start selection : set 1st selected bar
-					ui_first_selected_bar = key;
-					ui_current_bar = key;
-					ui_select_in_progress = FALSE;
-					// light on
-					// SAVE PREVIOUS LIGHT !!!
-					ui_bars [ui_current_instrument][ui_current_page][key] = HI_GREEN;
-					led_ui_bar (ui_current_instrument, ui_current_page, key);
+				if ((!ui_limit1_pressed) && (!ui_limit2_pressed)) {
+					//if selection has been done previously (no selection in progress), pressing a pad resets everything
+					//assign pressed pad to limit1
+					ui_limit1 = key;
+					ui_limit2 = key;
+					ui_limit1_pressed = TRUE;
+					ui_limit2_pressed = FALSE;
+					// display between limit 1 and 2
+					ui_current_bar = led_ui_select (ui_limit1, ui_limit2);
 				}
 				else {
-					// seelction in progress : pressed pad is going to be the end point of selection
-					ui_last_selected_bar = key;
-					// light on
-					// SAVE PREVIOUS LIGHT !!!
-					// attention si la selection est faite à l'envers !!!
-						for (i=ui_first_selected_bar ; i < ui_last_selected_bar; i++) {
-							ui_bars [ui_current_instrument][ui_current_page][i] = HI_GREEN;
-							led_ui_bar (ui_current_instrument, ui_current_page, i);
+					if ((ui_limit1_pressed) && (!ui_limit2_pressed)) {
+						//limit1 is assigned already; assign limit2
+						ui_limit2 = key;
+						ui_limit2_pressed = TRUE;
+						// display between limit 1 and 2
+						ui_current_bar = led_ui_select (ui_limit1, ui_limit2);
+					}
+					else {
+						if ((!ui_limit1_pressed) && (ui_limit2_pressed)) {
+							//limit2 is assigned already; assign limit1
+							ui_limit1 = key;
+							ui_limit1_pressed = TRUE;
+							// display between limit 1 and 2
+							ui_current_bar = led_ui_select (ui_limit1, ui_limit2);
 						}
+					}
 				}
-
-
-
-
-				ui_bars [ui_current_instrument][ui_current_page][key] = HI_RED;
-				ui_current_bar = key;
-				led_ui_bar (ui_current_instrument, ui_current_page, ui_current_bar);
 			}
 			break;
 

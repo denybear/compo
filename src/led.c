@@ -39,27 +39,25 @@ void led_ui_pages () {
 
 // light the "bars" table of leds
 void led_ui_bars (int instr, int page) {
-	int i, j;
-	uint8_t buffer [4];
+	int i;
 
-	buffer [0] = MIDI_NOTEON;
-	for (i=0; i<8; i++) {
-		for (j=0; j<8; j++) {
-			buffer [1] = (i << 4) + j;
-			buffer [2] = ui_bars [instr][page][(i * 8) + j];
-			push_to_list (UI, buffer);		// put in midisend buffer
-		}
+	for (i=0; i<64; i++) {
+		led_ui_bar (instr, page, i);
 	}
 }
 
 // light a single bar led, according to its value in the table
 void led_ui_bar (int instr, int page, int bar) {
 
-	uint8_t buffer [4];
+	uint8_t buffer [4], color;
+
+	// determine color based on bar color + selection color (in case selection is on the bar)
+	if ((ui_select [bar] == BLACK) || (ui_select [bar] == BLACK_ERASE)) color = ui_bars [instr][page][bar];
+	else color = ui_select [bar];
 
 	buffer [0] = MIDI_NOTEON;
 	buffer [1] = bar2midi (bar);
-	buffer [2] = ui_bars [instr][page][bar];
+	buffer [2] = color;
 	push_to_list (UI, buffer);		// put in midisend buffer
 }
 
@@ -84,6 +82,54 @@ void led_ui_page (int page) {
 	buffer [2] = ui_pages [page];
 	push_to_list (UI, buffer);			// put in midisend buffer
 }
+
+// light selection between limit1 and limit2 and high green; erase previous selection; processing is done so that number of midi messages is optimized
+// return first selected bar, which is always the min (lim1, lim2) 
+uint8_t led_ui_select (int lim1, int lim2) {
+
+	uint8_t buffer [4], color;
+	int start, end, i;
+
+	// assign start and end so start <= end
+	if (lim1 < lim2) {
+		start = lim1;
+		end = lim2;
+	}
+	else {
+		start = lim2;
+		end = lim1;
+	}
+
+	// clean current display buffer (to avoid overwriting issues)
+	memset (ui_select, BLACK, 64);
+	// display selection in high green in the display buffer
+	i = start;
+	while (i <= end ) {
+		ui_select [i] = HI_GREEN;
+		i++;
+	}
+
+	// display on the launchpad, by analyzing current selection to be dispay vs. previous selection buffer to be displayed
+	// go from pad to pad
+	for (i=0; i<64; i++) {
+		// this pad was lit, but should now be unlit
+		if ((ui_select_previous [i] != BLACK) && (ui_select [i] == BLACK)) {
+			// special black color to indicate we have to send a midi message to erase the pad (otherwise, optim does not send message)
+			ui_select [i] = BLACK_ERASE;
+		}
+
+		// determine if the pad should be lit or not, and eventually light it
+		if (ui_select [i] != BLACK){
+			led_ui_bar (ui_current_instrument, ui_current_page, i);
+		}
+	}
+
+	// copy current select buffer into previous buffer: current becomes previous
+	memcpy (ui_select_previous, ui_select, 64);
+
+	return (start);
+}
+
 
 
 

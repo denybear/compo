@@ -44,10 +44,12 @@ uint8_t kbd_list [LIST_ELT] [3];		// midi out buffer for KBD
 int kbd_list_index;				// index in the list
 
 // select functionality
-int ui_first_selected_bar;
-int ui_last_selected_bar;
-int ui_select_in_progress;
-
+int ui_limit1;
+int ui_limit2;
+int ui_limit1_pressed;
+int ui_limit2_pressed;
+uint8_t ui_select [64];					// buffer to store pads during selection process
+uint8_t ui_select_previous [64];		// buffer to store pads during selection process (previous selection)
 
 
 // determine if midi clock shall be sent or not
