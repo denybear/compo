@@ -31,7 +31,7 @@ extern uint8_t ui_instruments [8];		// state of ui for instrument pads
 extern uint8_t ui_pages [8];			// state of ui for pages pads
 extern uint8_t ui_bars [8][8][64];		// state of ui for bar: 64 bar per page, 8 pages, 8 instruments
 extern int ui_current_instrument;		// instrument currently selected
-extern int ui_current_page;			// page currently selected
+extern int ui_current_page;				// page currently selected
 extern int ui_current_bar;				// bar currently selected
 
 // define the structures for managing midi out (ie. lists)
@@ -39,6 +39,8 @@ extern uint8_t ui_list [][3];		// midi out buffer for UI
 extern int ui_list_index;			// index in the list
 extern uint8_t kbd_list [][3];		// midi out buffer for KBD
 extern int kbd_list_index;			// index in the list
+extern uint8_t out_list [] [3];		// midi out buffer for OUT (to fluidsynth)
+extern int out_list_index;			// index in the list
 
 // select functionality
 extern int ui_limit1;
@@ -48,34 +50,11 @@ extern int ui_limit2_pressed;
 extern uint8_t ui_select [64];				// buffer to store pads during selection process
 extern uint8_t ui_select_previous [64];		// buffer to store pads during selection process (previous selection)
 
+// song structure
+extern note_t song [SONG_SIZE];			// assume song will have less than 10000 notes in it
 
-
-
-
-
-// determine if midi clock shall be sent or not
-extern int send_clock;
-
-// define filename structure for each file name: midi file and SF2 file
-extern filename_t filename [];
-// define function structure
-extern filefunct_t filefunct [];
-
-// status of leds for filenames
-extern unsigned char led_status_filename [NB_NAMES][LAST_ELT]; 	// this table will contain whether each light is on/off at a time; this is to avoid sending led requests which are not required
-extern unsigned char led_status_filefunct [NB_FCT][LAST_ELT_FCT]; 	// this table will contain whether each light is on/off at a time; this is to avoid sending led requests which are not required
-
-/* volume and BPM */
-extern int bpm;
-extern int initial_bpm;
-extern int volume;
-extern int is_volume;
-
-/* PPQ */
-extern int ppq;
-
-/* beat */
-extern uint64_t now;       // time now
-extern uint64_t previous;  // time when "beat" key was last pressed
+// status variables
+extern int is_play;						// play is in progress
+extern int is_record;					// record is in progress 
 
 

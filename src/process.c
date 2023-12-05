@@ -29,6 +29,13 @@ int process ( jack_nframes_t nframes, void *arg )
 	jack_midi_event_t in_event;
 	jack_midi_data_t buffer[5];				// midi out buffer for lighting the pad leds and for midi clock
 	int dest, row, col, on_off;				// variables used to manage lighting of the pad leds
+	char ch;								// used to read keys from UI keyboard (not music MIDI keyboard)
+
+
+	/***********************/
+	/* Step 0, compute BBT */
+	/***********************/
+//	compute_bbt (nframes, pos, new_pos);
 
 
 	/***************************************/
@@ -112,6 +119,23 @@ int process ( jack_nframes_t nframes, void *arg )
 	}
 
 
+	/**************************************/
+	/* Last, process keyboard (UI) events */
+	/**************************************/
+
+	ch = getch();
+	switch (ch) {
+		case 'P':
+			// status variable
+			is_play = is_play ? FALSE : TRUE;
+			break;
+		case 'R':
+			// status variable
+			is_record = is_record ? FALSE : TRUE;
+			break;
+		default:
+			break;
+	}
 
 	return 0;
 }
@@ -119,6 +143,42 @@ int process ( jack_nframes_t nframes, void *arg )
 
 // process callback called to process midi_in events from KBD in realtime
 int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
+
+	int i;
+	int temp;
+	uint8_t buffer [4];
+	note_t note;
+
+
+	buffer [0] = event->buffer [0];
+	buffer [1] = event->buffer [1];
+	buffer [2] = event->buffer [2];
+
+
+	// play the music straight
+	// get midi channel from instrument number, and assign it to midi command
+	buffer [0] = (buffer [0] & 0xF0) | (instr2chan (ui_current_instrument));
+	push_to_list (OUT, buffer);			// put in midisend buffer to play the note straight !
+
+	// in case recording is on
+//	if (is_record && is_play) {
+	if (is_record) {
+		// fill-in note structure
+		note.already_played = TRUE;
+		note.instrument = ui_current_instrument;
+		note.bar = current_bar;
+		note.beat = current_beat;
+		note.tick = current_tick;
+		//note.tick = quantize (current_tick, quantifier);
+		note.status = buffer [0];		// midi command + midi channel
+		note.key = buffer [1];
+		note.vel = buffer [2];
+
+		// add to song
+		// write_to_song (note);
+
+
+	}
 }
 
 // process callback called to process midi_in events from UI in realtime

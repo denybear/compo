@@ -1,6 +1,6 @@
 /** @file main.c
  *
- * @brief This is the main file for the looper program. It uses the basic features of JACK.
+ * @brief This is the main file for the program. It uses the basic features of JACK.
  *
  */
 
@@ -23,6 +23,8 @@ static void init_globals ( )
 	/* INIT SOME GLOBAL VARIABLES */
 	/******************************/
 
+	// empty song structure
+	memset (song, 0, SONG_SIZE * sizeof (note_t));
 	// fill UI structures with start values to set up leds
 	memset (ui_instruments, LO_GREEN, 8);
 	memset (ui_pages, LO_GREEN, 8);
@@ -44,6 +46,17 @@ static void init_globals ( )
 	ui_limit2 = ui_current_bar;
 	ui_limit1_pressed = FALSE;
 	ui_limit2_pressed = FALSE;
+
+	// init ncurses for non-blocking key capture
+	initscr();				// init curses, 
+	nodelay(stdscr, TRUE);	// no delaying, no blocking
+	noecho();				// no echoing
+	cbreak ();				// no buffering
+	keypad (stdstr, TRUE);	// special keys can be captured
+
+	// set other variables
+	is_play = FALSE;
+	is_record = FALSE;
 }
 
 
@@ -238,6 +251,11 @@ int main ( int argc, char *argv[] )
 			fprintf ( stderr, "cannot connect ports (between client and server).\n" );
 	}
 */
+
+	// assign midi instrument to each channel
+	init_instruments ();
+	// set volume for each channel to 64 (mid-volume)
+	init_volumes (64);
 
 	// light leds on the UI
 	led_ui_instruments ();

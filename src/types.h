@@ -13,6 +13,7 @@
 #include <signal.h>
 #include <dirent.h>
 #include <time.h>
+#include <ncurses.h>
 #ifndef WIN32
 #include <unistd.h>
 #endif
@@ -34,22 +35,41 @@
 #define LO_YELLOW	0x2D
 #define HI_YELLOW	0x3E
 
-
+// midi messages definition
 #define MIDI_NOTEON		0x90
 #define MIDI_NOTEOFF	0x80
 #define MIDI_CC			0xB0
+#define MIDI_PC			0xC0
+#define MIDI_CLOCK		0xF8
+#define MIDI_RESERVED	0xF9
+#define MIDI_PLAY		0xFA
+#define MIDI_STOP		0xFC
 
 /* define status, etc */
-#define UI	0
-#define KBD 1
+#define TRUE	1
+#define FALSE	0
+#define UI		0
+#define KBD		1
+#define OUT		2
+#define SONG_SIZE	10000		// max number of notes for a song
+
+
+/* types */
+// each note consists in this structure : 66 bytes - TBD whether it needs to be optimized
+typedef struct {
+	uint8_t	already_played;
+	uint8_t instrument;
+	uint16_t bar;
+	uint8_t beat;
+	uint16_t tick;
+	uint8_t status;		// MIDI cmd + channel
+	uint8_t key;
+	uint8_t vel;
+} note_t;
 
 
 
 
-#define MIDI_CLOCK 0xF8
-#define MIDI_RESERVED 0xF9
-#define MIDI_PLAY 0xFA
-#define MIDI_STOP 0xFC
 #define MIDI_CLOCK_RATE 96 // 24*4 ticks for full note, 24 ticks per quarter note
 
 #define NB_NAMES 2		// 2 file names: 1 midi file name, 1 SF2 file name
@@ -76,8 +96,6 @@
 #define LAST_ELT_FCT 5		// used for declarations and loops
 
 /* define status, etc */
-#define TRUE 1
-#define FALSE 0
 
 #define NAMES 0
 #define FCT 1
@@ -95,18 +113,4 @@
 
 /* list management (used for led mgmt) */
 #define LIST_ELT 100
-
-
-/* types */
-typedef struct {						// structure for each of the 2 names
-	unsigned char ctrl [LAST_ELT] [2];	//controls on the midi control surface
-	unsigned char led [LAST_ELT] [LAST_STATE] [3];		// led lightings on the midi control surface (off, pending, on...)
-	unsigned char status [LAST_ELT];	// Status byte for each function
-} filename_t;
-
-typedef struct {						// structure for each of the 2 names
-	unsigned char ctrl [LAST_ELT_FCT] [2];	//controls on the midi control surface
-	unsigned char led [LAST_ELT_FCT] [LAST_STATE] [3];		// led lightings on the midi control surface (off, pending, on...)
-	unsigned char status [LAST_ELT_FCT];	// Status byte for each function
-} filefunct_t;
 

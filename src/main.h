@@ -42,6 +42,8 @@ uint8_t ui_list [LIST_ELT] [3];		// midi out buffer for UI
 int ui_list_index = 0;				// index in the list
 uint8_t kbd_list [LIST_ELT] [3];	// midi out buffer for KBD
 int kbd_list_index = 0;				// index in the list
+uint8_t out_list [LIST_ELT] [3];	// midi out buffer for OUT (to fluidsynth)
+int out_list_index = 0;				// index in the list
 
 // select functionality
 int ui_limit1;
@@ -51,35 +53,10 @@ int ui_limit2_pressed;
 uint8_t ui_select [64];					// buffer to store pads during selection process
 uint8_t ui_select_previous [64];		// buffer to store pads during selection process (previous selection)
 
+// song structure
+note_t song [SONG_SIZE];			// assume song will have less than 10000 notes in it
 
-// determine if midi clock shall be sent or not
-int send_clock = NO_CLOCK;
-
-// define filename structure for each file name: midi file and SF2 file
-filename_t filename [NB_NAMES];
-// define function structure
-filefunct_t filefunct [NB_FCT];
-
-// status of leds for filenames
-unsigned char led_status_filename [NB_NAMES][LAST_ELT]; 	// this table will contain whether each light is on/off at a time; this is to avoid sending led requests which are not required
-unsigned char led_status_filefunct [NB_FCT][LAST_ELT_FCT]; 	// this table will contain whether each light is on/off at a time; this is to avoid sending led requests which are not required
-
-/* volume and BPM */
-int bpm;
-int initial_bpm;
-int volume;
-int is_volume;
-
-/* PPQ */
-int ppq;
-
-/* beat */
-uint64_t now;       // time now
-uint64_t previous;  // time when "beat" key was last pressed
-
-/* for debug purpose only
-char trace[50000][80];
-int trace_index = 0;
-int trace_beat;
-*/
+// status variables
+int is_play;						// play is in progress
+int is_record;						// record is in progress 
 

@@ -12,14 +12,6 @@
 #include "led.h"
 
 
-// determines if 2 midi messages (ie. events) are the same; returns TRUE if yes
-int same_event (unsigned char * evt1, unsigned char * evt2) {
-
-	if ((evt1[0]==evt2[0]) && (evt1[1]==evt2[1])) return TRUE;
-	return FALSE;
-}
-
-
 // convert pad midi number to bar number : ie 0x00-0x77 to 0-63
 uint8_t midi2bar (uint8_t midi) {
 
@@ -42,11 +34,45 @@ uint8_t bar2midi (uint8_t bar) {
 }
 
 
+// convert song instrument to midi channel
+uint8_t instr2chan (uint8_t instr) {
+
+	const uint8_t chan [8] = {9, 0, 1, 2, 3, 4, 5, 6};		// 1st instrument is drum channel
+	return (chan [instr]);
+}
+
+
+
 // add led request to the list of requests to be processed
 int push_to_list (int device, uint8_t * buffer) {
 
-	int i;
+	int i, *index;
+	uint8_t *list;
 
+	switch (device) {
+		case UI:
+			index = &ui_list_index;
+			list = ui_list;
+			break;
+		case KBD:
+			index = &kbd_list_index;
+			list = kbd_list;
+			break;
+		case OUT:
+			index = &out_list_index;
+			list = out_list;
+			break;
+	}
+
+	for (i = 0; i < 3; i++) {
+		// add to the list
+		list [(*index * 3) + i] = buffer [i];
+	}
+	// increment index and check boundaries
+	if (*index >= (LIST_ELT-1)) *index = 0;
+	else (*index)++;
+
+/*
 	// check to which list we should add
 	if (device == UI) {
 		for (i = 0; i < 3; i++) {
@@ -57,15 +83,7 @@ int push_to_list (int device, uint8_t * buffer) {
 		if (ui_list_index >= (LIST_ELT-1)) ui_list_index = 0;
 		else ui_list_index++;
 	}
-	else {
-		for (i = 0; i < 3; i++) {
-			// add to the list
-			kbd_list [kbd_list_index] [i] = buffer [i];
-		}
-		// increment index and check boundaries
-		if (kbd_list_index >= (LIST_ELT-1)) kbd_list_index = 0;
-		else kbd_list_index++;
-	}
+*/
 }
 
 
@@ -188,5 +206,45 @@ void create_quantization_table (uint32_t *table, int npb) {
 	for (i=0; i < npb * 512 ; i++) {				// 512 bars
 		table [i + 1] = offset + (increment * i);
 printf ("%d, ", table [i+0]);
+	}
+}
+
+
+// init a midi instrument to each channel
+// https://www.recordingblogs.com/wiki/midi-program-change-message
+void init_instruments () {
+
+	uint8_t buffer [4], chan;
+	int i;
+	const uint8_t instr [8] = {0, 0, 2, 16, 33, 27, 48, 61};		// (drum), piano, elec piano, hammond organ, fingered bass, clean guitar, string ensemble, brass ensemble
+	
+	for (i = 0; i < 8; i++){
+
+		chan = instr2chan (i);
+		if (chan != 9) {
+			// non-drum instruments will get program change
+			buffer [0] = MIDI_PC | chan;
+			buffer [1] = instr [i];
+			buffer [2] = 0;
+		}
+
+		push_to_list (OUT, buffer);			// put in midi send buffer to assign instruments to midi channels
+	}
+}
+
+
+// init volume to each midi channel
+void init_volumes (uint8_t vol) {
+
+	uint8_t buffer [4];
+	int i;
+	
+	for (i = 0; i < 8; i++){
+
+		buffer [0] = MIDI_CC | instr2chan (i);
+		buffer [1] = 0x07;					// 0x07 is Volume Control Change
+		buffer [2] = vol;					// volume goes from 0 to 127
+
+		push_to_list (OUT, buffer);			// put in midi send buffer to assign volume to midi channels
 	}
 }
