@@ -10,7 +10,7 @@ DEPS = jack/jack.h jack/midiport.h types.h main.h process.h utils.h led.h
 
 #Any special libraries you are using in your project (e.g. -lbcm2835 -lrt `pkg-config --libs gtk+-3.0` ), or leave blank
 #LIBS = -L/usr/lib/i386-linux-gnu -ljack
-LIBS = -ljack -lm -L/usr/local/lib64
+LIBS = -ljack -lm -lncurses -L/usr/local/lib64
 
 
 #Set any compiler flags you want to use (e.g. -I/usr/include/somefolder `pkg-config --cflags gtk+-3.0` ), or leave blank

@@ -52,21 +52,21 @@ int push_to_list (int device, uint8_t * buffer) {
 	switch (device) {
 		case UI:
 			index = &ui_list_index;
-			list = ui_list;
+			list = &ui_list[0][0];
 			break;
 		case KBD:
 			index = &kbd_list_index;
-			list = kbd_list;
+			list = &kbd_list[0][0];
 			break;
 		case OUT:
 			index = &out_list_index;
-			list = out_list;
+			list = &out_list[0][0];
 			break;
 	}
 
 	for (i = 0; i < 3; i++) {
 		// add to the list
-		list [(*index * 3) + i] = buffer [i];
+		list [((*index) * 3) + i] = buffer [i];
 	}
 	// increment index and check boundaries
 	if (*index >= (LIST_ELT-1)) *index = 0;
@@ -91,38 +91,39 @@ int push_to_list (int device, uint8_t * buffer) {
 // returns 0 if pull request has failed (nomore request to be pulled out)
 int pull_from_list (int device, uint8_t * buffer) {
 
-	int i;
+	int i, *index;
+	uint8_t *list;
+
+	switch (device) {
+		case UI:
+			index = &ui_list_index;
+			list = &ui_list[0][0];
+			break;
+		case KBD:
+			index = &kbd_list_index;
+			list = &kbd_list[0][0];
+			break;
+		case OUT:
+			index = &out_list_index;
+			list = &out_list[0][0];
+			break;
+	}
 
 	// check to which list we should add
-	if (device == UI) {
-		// check if we have requests to be pulled; if not, leave
-		if (ui_list_index == 0) return 0;
 
-		// pull first element from list
-		for (i = 0; i < 3; i++) {
-			// pull from the list
-			buffer [i] = ui_list [0][i];
-		}
-		// decrement index
-		ui_list_index--;
-		// move the rest of the list 1 item backwards
-		memmove (&ui_list [0][0], &ui_list [1][0], ui_list_index * 3);
+	// check if we have requests to be pulled; if not, leave
+	if (*index == 0) return 0;
+
+	// pull first element from list
+	for (i = 0; i < 3; i++) {
+		// pull from the list
+		buffer [i] = list [i];
 	}
-	else {
-		// check if we have requests to be pulled; if not, leave
-		if (kbd_list_index == 0) return 0;
+	// decrement index
+	(*index)--;
+	// move the rest of the list 1 item backwards
+	memmove (list, list + 3, (*index) * 3);
 
-		// pull first element from list
-		for (i = 0; i < 3; i++) {
-			// pull from the list
-			buffer [i] = kbd_list [0][i];
-		}
-
-		// decrement index
-		kbd_list_index--;
-		// move the rest of the list 1 item backwards
-		memmove (&kbd_list [0][0], &kbd_list [1][0], kbd_list_index * 3);
-	}
 	return 1;
 }
 
@@ -135,80 +136,64 @@ int pull_from_list (int device, uint8_t * buffer) {
 // requires jack_position_t * which will contain the BBT information
 void compute_bbt (jack_nframes_t nframes, jack_position_t *pos, int new_pos)
 {
-	double min;			/* minutes since frame 0 */
-	long abs_tick;		/* ticks since frame 0 */
-	long abs_beat;		/* beats since frame 0 */
+	double ticks_per_bar;		// number of ticks per bar
+	double temp;
 
 	if (new_pos) {
+
+		pos->frame_rate = jack_get_sample_rate(client);			// set frame rate (sample rate) to the BBT structure
 		pos->valid = JackPositionBBT;
 		pos->beats_per_bar = time_beats_per_bar;
 		pos->beat_type = time_beat_type;
 		pos->ticks_per_beat = time_ticks_per_beat;
 		pos->beats_per_minute = time_beats_per_minute;
 
-		if (new_pos == 2) {
-			// set BBT to 1,1,1
-			pos->bar = 1;
-			pos->beat = 1;
-			pos->tick = 1;
-			pos->bar_start_tick = 1;
-		}
-		else {
-
-			/* Compute BBT info from frame number.  This is
-			 * relatively simple here, but would become complex if
-			 * we supported tempo or time signature changes at
-			 * specific locations in the transport timeline.  I
-			 * make no claims for the numerical accuracy or
-			 * efficiency of these calculations. */
-
-			min = pos->frame / ((double) pos->frame_rate * 60.0);
-			abs_tick = min * pos->beats_per_minute * pos->ticks_per_beat;
-			abs_beat = abs_tick / pos->ticks_per_beat;
-
-			pos->bar = abs_beat / pos->beats_per_bar;
-			pos->beat = abs_beat - (pos->bar * pos->beats_per_bar) + 1;
-			pos->tick = abs_tick - (abs_beat * pos->ticks_per_beat);
-			pos->bar_start_tick = pos->bar * pos->beats_per_bar * pos->ticks_per_beat;
-			pos->bar++;		/* adjust start to bar 1 */
-		}
+		// set BBT to (ui_current_bar),1,1; this is in the case of "play"
+		pos->bar = ui_current_bar;
+		pos->beat = 0;
+		pos->tick = 0;
+		pos->bar_start_tick = 0.0;
 	}
 	else {
 
 		/* Compute BBT info based on previous period. */
-		pos->tick += (nframes * pos->ticks_per_beat * pos->beats_per_minute / (pos->frame_rate * 60));
+		// (1) pos->ticks_per_beat * pos->beats_per_minute : number of ticks per minutes
+		// (2) (pos->frame_rate * 60) / nframes : number of frames per minute
+		// (1)/(2) = number of ticks per frame; (1)/(2) is equal to (1) * inv(2) 
+		pos->bar_start_tick += (pos->ticks_per_beat * pos->beats_per_minute * nframes / (pos->frame_rate * 60));
 
-		while (pos->tick >= pos->ticks_per_beat) {
-			pos->tick -= pos->ticks_per_beat;
-			if (++pos->beat > pos->beats_per_bar) {
-				pos->beat = 1;
-				++pos->bar;
-				pos->bar_start_tick += (pos->beats_per_bar * pos->ticks_per_beat);
-			}
-		}
+		// computes BTT, based on float bar_start_tick (number of ticks since play is pressed)
+		ticks_per_bar = pos->beats_per_bar * pos->ticks_per_beat;
+		pos->tick = (int) pos->bar_start_tick % (int) ticks_per_bar;	// tick number within the bar
+		pos->beat = pos->tick / (int) time_ticks_per_beat;				// beat number within the bar
+		pos->bar = ui_current_bar + ((int) pos->bar_start_tick / (int) ticks_per_bar);		// bar number
 	}
-printf ("%d, %d, %d, %d\n", pos->bar, pos->beat, pos->tick, pos->frame_rate);
 }
 
 
-// create a table to hep with quantization computing
+// create a table to help with quantization computing
 // npb indicates number of notes per bar: 4 = Quarter, 8 = 8th, 16 = 16th, 32 = 32th
-// table is big enough to cover 64 bars * 8 = 512 bars, therefore 512 * npb notes
+// table contains only 1 bar, this is enough
+// table length is NPB + 1
 void create_quantization_table (uint32_t *table, int npb) {
 	int i;
 	uint32_t time, increment, offset;
 
 	table [0] = 0;				// special case for element 0
 
-	increment = time_ticks_per_beat / npb * 4;	// increment between 2 notes, in tick
-	offset = increment / 2;						// offset is the start value
+	increment = (4 * time_ticks_per_beat) / npb;	// increment between 2 notes, in tick; shall be multiplied by 4 as "quarter" note is actually 1 beat
+	offset = increment / 2;							// offset is the start value
 
-	for (i=0; i < npb * 512 ; i++) {				// 512 bars
+	for (i=0; i < npb; i++) {
 		table [i + 1] = offset + (increment * i);
-printf ("%d, ", table [i+0]);
 	}
 }
 
+
+// quantize a tick to the nearest value, according to quantizaton table
+uint32_t quantize (uint32_t tick, int quant) {
+
+}
 
 // init a midi instrument to each channel
 // https://www.recordingblogs.com/wiki/midi-program-change-message

@@ -14,7 +14,7 @@
 // signature is "march time": 4/4, 120bpm
 float time_beats_per_bar = 4.0;
 float time_beat_type = 4.0;
-double time_ticks_per_beat = 1920.0;	// 480 should be enough...
+double time_ticks_per_beat = 480.0;
 double time_beats_per_minute = 120.0;
 jack_position_t time_position;			// structure that contains BBT for the playing / recording 
 
@@ -25,9 +25,6 @@ jack_port_t *midi_out;
 
 // define JACKD client : this is this program
 jack_client_t *client;
-
-// number of frames per Jack packet and sample-rate
-uint32_t nb_frames_per_packet, sample_rate;
 
 // tables required for UI
 uint8_t ui_instruments [8];		// state of ui for instrument pads
@@ -60,3 +57,6 @@ note_t song [SONG_SIZE];			// assume song will have less than 10000 notes in it
 int is_play;						// play is in progress
 int is_record;						// record is in progress 
 
+// quantization variables
+int quantizer = THIRTY_SECOND;		// contains value used for quantization
+uint32_t quantization_table [100];	// table used to store quantization parameters

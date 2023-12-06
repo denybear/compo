@@ -23,9 +23,6 @@ extern jack_port_t *midi_out;
 // define JACKD client : this is this program
 extern jack_client_t *client;
 
-// number of frames per Jack packet and sample-rate
-extern uint32_t nb_frames_per_packet, sample_rate;
-
 // tables required for UI
 extern uint8_t ui_instruments [8];		// state of ui for instrument pads
 extern uint8_t ui_pages [8];			// state of ui for pages pads
@@ -56,5 +53,9 @@ extern note_t song [SONG_SIZE];			// assume song will have less than 10000 notes
 // status variables
 extern int is_play;						// play is in progress
 extern int is_record;					// record is in progress 
+
+// quantization variables
+extern int quantizer;						// contains value used for quantization
+extern uint32_t quantization_table [100];	// table used to store quantization parameters
 
 

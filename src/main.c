@@ -23,6 +23,13 @@ static void init_globals ( )
 	/* INIT SOME GLOBAL VARIABLES */
 	/******************************/
 
+	// empty midi send lists
+	ui_list_index = 0;
+	kbd_list_index = 0;
+	out_list_index = 0;
+	memset (ui_list, 0, LIST_ELT * 3);
+	memset (kbd_list, 0, LIST_ELT * 3);
+	memset (out_list, 0, LIST_ELT * 3);
 	// empty song structure
 	memset (song, 0, SONG_SIZE * sizeof (note_t));
 	// fill UI structures with start values to set up leds
@@ -48,11 +55,15 @@ static void init_globals ( )
 	ui_limit2_pressed = FALSE;
 
 	// init ncurses for non-blocking key capture
-	initscr();				// init curses, 
-	nodelay(stdscr, TRUE);	// no delaying, no blocking
-	noecho();				// no echoing
-	cbreak ();				// no buffering
-	keypad (stdstr, TRUE);	// special keys can be captured
+//	initscr();				// init curses, 
+//	nodelay(stdscr, TRUE);	// no delaying, no blocking
+//	noecho();				// no echoing
+//	cbreak ();				// no buffering
+//	keypad (stdscr, TRUE);	// special keys can be captured
+
+	// init quantization engine
+	quantizer = THIRTY_SECOND;
+	create_quantization_table (quantization_table, quantizer);
 
 	// set other variables
 	is_play = FALSE;
@@ -64,6 +75,8 @@ static void signal_handler ( int sig )
 {
 	// JACK client close
 	jack_client_close ( client );
+	echo ();
+	endwin ();				// end curses
 
 	fprintf ( stderr, "signal received, exiting ...\n" );
 	exit ( 0 );
@@ -76,6 +89,9 @@ static void signal_handler ( int sig )
  */
 void jack_shutdown ( void *arg )
 {
+	echo ();
+	endwin ();				// end curses
+
 	free (midi_UI_in);
 	free (midi_UI_out);
 	free (midi_KBD_in);
@@ -139,11 +155,6 @@ int main ( int argc, char *argv[] )
 	   there is work to be done.
 	*/
 
-	/* assign number of frames per packet and sample rate */
-	sample_rate = jack_get_sample_rate(client);
-	nb_frames_per_packet =  jack_get_buffer_size(client);
-	time_position.frame_rate = sample_rate;			// set frame rate to the BBT structure used by compo
-
 	/* set callback function to process jack events */
 	jack_set_process_callback ( client, process, 0 );
 
@@ -198,14 +209,6 @@ int main ( int argc, char *argv[] )
 		exit ( 1 );
 	}
 
-	/* set callback function to process BBT */
-	if (jack_set_timebase_callback(client, 0, timebbt, NULL) != 0) {
-		fprintf (stderr, "unable to take over timebase.\n");
-		// JACK client close
-		jack_client_close ( client );
-		exit ( 1 );
-	}
-
 	/* Tell the JACK server that we are ready to roll.  Our
 	 * process() callback will start running now. */
 
@@ -235,13 +238,14 @@ int main ( int argc, char *argv[] )
 
 	/* go through the list of ports to be connected and connect them by pair (server, client) */
 	/* fixed devices and fluidsynth output */
-	if ( jack_connect ( client, "a2j:Launchpad Mini (capture): Launchpad Mini MIDI 1", "compo.a:midi_UI_in") ) {
+/*	if ( jack_connect ( client, "a2j:Launchpad Mini (capture): Launchpad Mini MIDI 1", "compo.a:midi_UI_in") ) {
 			fprintf ( stderr, "cannot connect ports (between client and server).\n" );
 	}
 	if ( jack_connect ( client, "compo.a:midi_UI_out", "a2j:Launchpad Mini (playback): Launchpad Mini MIDI 1") ) {
 			fprintf ( stderr, "cannot connect ports (between client and server).\n" );
 	}
-/*	if ( jack_connect ( client, "a2j:MPK Mini Mk II (capture): MPK Mini Mk II MIDI 1", "compo.a:midi_KBD_in") ) {
+*/
+	if ( jack_connect ( client, "a2j:MPK Mini Mk II (capture): MPK Mini Mk II MIDI 1", "compo.a:midi_KBD_in") ) {
 			fprintf ( stderr, "cannot connect ports (between client and server).\n" );
 	}
 	if ( jack_connect ( client, "compo.a:midi_KBD_out", "a2j:MPK Mini Mk II (playback): MPK Mini Mk II MIDI 1") ) {
@@ -250,7 +254,7 @@ int main ( int argc, char *argv[] )
 	if ( jack_connect ( client, "compo.a:midi_out", "qsynth:midi_00") ) {
 			fprintf ( stderr, "cannot connect ports (between client and server).\n" );
 	}
-*/
+
 
 	// assign midi instrument to each channel
 	init_instruments ();

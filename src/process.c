@@ -21,9 +21,7 @@ int previous_index_pulse;
 // main process callback called at capture of (nframes) frames/samples
 int process ( jack_nframes_t nframes, void *arg )
 {
-	jack_nframes_t h;
 	int i,j,k;
-	int mute = OFF;
 	void *midiin;
 	void *midiout;
 	jack_midi_event_t in_event;
@@ -32,10 +30,10 @@ int process ( jack_nframes_t nframes, void *arg )
 	char ch;								// used to read keys from UI keyboard (not music MIDI keyboard)
 
 
-	/***********************/
-	/* Step 0, compute BBT */
-	/***********************/
-//	compute_bbt (nframes, pos, new_pos);
+	/***********************************************************/
+	/* Step 0, compute BBT (but only if we are playing a song) */
+	/***********************************************************/
+	if (is_play) compute_bbt (nframes, &time_position, FALSE);
 
 
 	/***************************************/
@@ -67,6 +65,12 @@ int process ( jack_nframes_t nframes, void *arg )
 	jack_midi_clear_buffer (midiout);
 
 	//go through the list of led requests
+	while (pull_from_list (OUT, buffer)) {
+		// if buffer is not empty, then send as midi out event
+		if (buffer [0] | buffer [1] | buffer [2]) {
+			jack_midi_event_write (midiout, 0, buffer, 3);
+		}
+	}
 
 
 	/****************************************/
@@ -80,7 +84,12 @@ int process ( jack_nframes_t nframes, void *arg )
 	jack_midi_clear_buffer (midiout);
 
 	//go through the list of led requests
-
+	while (pull_from_list (KBD, buffer)) {
+		// if buffer is not empty, then send as midi out event
+		if (buffer [0] | buffer [1] | buffer [2]) {
+			jack_midi_event_write (midiout, 0, buffer, 3);
+		}
+	}
 
 	/***************************************/
 	/* Fourth, process MIDI in (UI) events */
@@ -128,6 +137,8 @@ int process ( jack_nframes_t nframes, void *arg )
 		case 'P':
 			// status variable
 			is_play = is_play ? FALSE : TRUE;
+			// reset BBT position
+			compute_bbt (nframes, &time_position, TRUE);
 			break;
 		case 'R':
 			// status variable
@@ -161,15 +172,13 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 	push_to_list (OUT, buffer);			// put in midisend buffer to play the note straight !
 
 	// in case recording is on
-//	if (is_record && is_play) {
-	if (is_record) {
+	if (is_record && is_play) {
 		// fill-in note structure
 		note.already_played = TRUE;
 		note.instrument = ui_current_instrument;
-		note.bar = current_bar;
-		note.beat = current_beat;
-		note.tick = current_tick;
-		//note.tick = quantize (current_tick, quantifier);
+		note.bar = time_position.bar;
+		note.beat = time_position.beat;
+		note.tick = quantize (time_position.tick, quantizer);
 		note.status = buffer [0];		// midi command + midi channel
 		note.key = buffer [1];
 		note.vel = buffer [2];
@@ -321,12 +330,4 @@ int ui_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 	}
 }
 
-
-// time callback called at after "process" callback, and used to compute BBT
-void timebbt (jack_transport_state_t state, jack_nframes_t nframes, jack_position_t *pos, int new_pos, void *arg)
-{
-	if (new_pos) new_pos = 1;	// if new_pos is !=0, then force its value to 1
-	// compute BBT
-	compute_bbt (nframes, pos, new_pos);
-}
 
