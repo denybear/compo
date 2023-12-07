@@ -63,7 +63,7 @@ static void init_globals ( )
 
 	// init quantization engine
 	quantizer = THIRTY_SECOND;
-	create_quantization_table (quantization_table, quantizer);
+	create_quantization_tables ();		// create all the tables used for quantization
 
 	// set other variables
 	is_play = FALSE;

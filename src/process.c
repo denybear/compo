@@ -165,11 +165,11 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 	buffer [1] = event->buffer [1];
 	buffer [2] = event->buffer [2];
 
-
 	// play the music straight
 	// get midi channel from instrument number, and assign it to midi command
 	buffer [0] = (buffer [0] & 0xF0) | (instr2chan (ui_current_instrument));
 	push_to_list (OUT, buffer);			// put in midisend buffer to play the note straight !
+
 
 	// in case recording is on
 	if (is_record && is_play) {
@@ -179,12 +179,20 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 		note.bar = time_position.bar;
 		note.beat = time_position.beat;
 		note.tick = quantize (time_position.tick, quantizer);
+		// check whether tick is on next bar or not
+		if (note.tick == 0xFFFFFFFF) {
+			// check boundaries of bar
+			if (time_position.bar < 511) note.bar = time_position.bar + 1;
+			else note.bar = 0;
+			note.beat = 0;
+			note.tick = 0;
+		}
 		note.status = buffer [0];		// midi command + midi channel
 		note.key = buffer [1];
 		note.vel = buffer [2];
 
-		// add to song
-		// write_to_song (note);
+		// add quantized note to song
+		write_to_song (note);
 
 
 	}

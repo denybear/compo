@@ -56,6 +56,7 @@ extern int is_record;					// record is in progress
 
 // quantization variables
 extern int quantizer;						// contains value used for quantization
-extern uint32_t quantization_table [100];	// table used to store quantization parameters
+extern uint32_t quantization_range [5][40];	// table used to store quantization parameters : range where note should be in
+extern uint32_t quantization_value [5][40];	// table used to store quantization parameters : exact value note should take to be quantized
 
 

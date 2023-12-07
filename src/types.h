@@ -58,10 +58,10 @@
 
 /* quantizer values */
 #define FREE_TIMING		0
-#define	QUARTER			4
-#define EIGHTH			8
-#define SIXTEENTH		16
-#define THIRTY_SECOND	32
+#define	QUARTER			1
+#define EIGHTH			2
+#define SIXTEENTH		3
+#define THIRTY_SECOND	4
 
 
 /* types */

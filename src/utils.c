@@ -167,33 +167,63 @@ void compute_bbt (jack_nframes_t nframes, jack_position_t *pos, int new_pos)
 		pos->tick = (int) pos->bar_start_tick % (int) ticks_per_bar;	// tick number within the bar
 		pos->beat = pos->tick / (int) time_ticks_per_beat;				// beat number within the bar
 		pos->bar = ui_current_bar + ((int) pos->bar_start_tick / (int) ticks_per_bar);		// bar number
+		// check bar boundaries; go to bar 0 if we reach last bar
+		if (pos->bar > 512) pos->bar = pos->bar % 512;		// 512 = 64 bar * 8 pages; we loop after 512 bars
 	}
 }
 
 
-// create a table to help with quantization computing
-// npb indicates number of notes per bar: 4 = Quarter, 8 = 8th, 16 = 16th, 32 = 32th
-// table contains only 1 bar, this is enough
+// create tables to help with quantization computing
+// npb indicates number of notes per bar: 1 = Quarter, 2 = 8th, 3 = 16th, 4 = 32th
+// 2 tables contaning only 1 bar, this is enough
 // table length is NPB + 1
-void create_quantization_table (uint32_t *table, int npb) {
-	int i;
+// one table contains timing ranges of notes, allowing to determine the right timing
+// the other table contains the correct timing to be returned
+void create_quantization_tables () {
+	const int pow [5] = {0, 4, 8, 16, 32};	// number of notes per bar
+	int i, j, nbp;
 	uint32_t time, increment, offset;
 
-	table [0] = 0;				// special case for element 0
+	for (j = 0; j < 5; j++) {			// go from free-timing to 4th, 8th, 16th, 32th
 
-	increment = (4 * time_ticks_per_beat) / npb;	// increment between 2 notes, in tick; shall be multiplied by 4 as "quarter" note is actually 1 beat
-	offset = increment / 2;							// offset is the start value
+		nbp = pow [j];					// convert type of note into number of divisions 
+		quantization_range [j][0] = 0;	// special case for element 0
 
-	for (i=0; i < npb; i++) {
-		table [i + 1] = offset + (increment * i);
+		if (nbp !=0) increment = time_beats_per_bar * time_ticks_per_beat / nbp;		// increment between 2 notes, in tick
+		else increment = 0;											// in case of free-timing, table will not be used anyway
+
+		offset = increment / 2;										// offset is the start value
+
+		for (i=0; i < (nbp + 1); i++) {								// go through a complete bar
+			// (npb + 1) allows to have an extra value in table, which is useful to determine if a note belongs to the next bar
+			// example : NPB = 1 (quarter note), PPQ = 480
+			// range table is: 0, 240, 720, 1200, 1680, 2160
+			// value table is: 0, 480, 960, 1440, 1920
+			// the last values of tables mean note is on the next bar (at PPQ=480, 1920 is start of next bar; 2160 does not exist in theory)
+			quantization_range [j][i + 1] = offset + (increment * i);
+			quantization_value [j][i] = increment * i;
+		}
+
+		if (nbp !=0) quantization_value [j][i-1] = 0xFFFFFFFF;	// force last value of table to FFFFFFFF to indicate it is on next bar
 	}
 }
 
 
-// quantize a tick to the nearest value, according to quantizaton table
+// quantize a tick to the nearest value, according to quantization table
+// in case tick is on next bar, return 0xFFFFFFFF (as it s defined in quantization table)
 uint32_t quantize (uint32_t tick, int quant) {
+	const int pow [5] = {0, 4, 8, 16, 32};	// number of notes per bar
+	int i, nbp;
 
+	nbp = pow [quant];					// convert type of note into number of divisions 
+
+	if (quant == FREE_TIMING) return tick;
+
+	for (i=0; i < (nbp + 1); i++) {		// go through a complete bar
+		if ((tick >= quantization_range [quant][i]) && (tick < quantization_range [quant][i+1])) return (quantization_value [quant][i]);
+	}
 }
+
 
 // init a midi instrument to each channel
 // https://www.recordingblogs.com/wiki/midi-program-change-message
@@ -232,4 +262,22 @@ void init_volumes (uint8_t vol) {
 
 		push_to_list (OUT, buffer);			// put in midi send buffer to assign volume to midi channels
 	}
+}
+
+
+void write_to_song (note_t note) {
+
+/*
+typedef struct {
+	uint8_t	already_played;
+	uint8_t instrument;
+	uint16_t bar;
+	uint8_t beat;
+	uint16_t tick;
+	uint8_t status;		// MIDI cmd + channel
+	uint8_t key;
+	uint8_t vel;
+} note_t;
+*/
+
 }
