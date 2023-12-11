@@ -68,6 +68,7 @@ static void init_globals ( )
 	// set other variables
 	is_play = FALSE;
 	is_record = FALSE;
+	song_length = 0;		// indicates length of the song (highest index in song [])
 }
 
 

@@ -125,7 +125,7 @@ uint8_t led_ui_select (int lim1, int lim2) {
 	}
 
 	// copy current select buffer into previous buffer: current becomes previous
-	memcpy (ui_select_previous, ui_select, 64);
+	memcpy (ui_select_previous, ui_select, 64);		// memcpy is fine as there is no overlapping memory area
 
 	return (start);
 }
