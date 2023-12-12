@@ -9,6 +9,7 @@
 #include "process.h"
 #include "utils.h"
 #include "led.h"
+#include "song.h"
 
 
 // light the "instruments" row of leds
