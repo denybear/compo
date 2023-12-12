@@ -10,6 +10,7 @@
 #include "process.h"
 #include "utils.h"
 #include "led.h"
+#include "song.h"
 
 
 // number of midi clock signal sent per quarter note; from 0 to 23

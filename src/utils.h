@@ -15,8 +15,6 @@ void create_quantization_tables ();
 uint32_t quantize (uint32_t, int);
 void init_instruments ();
 void init_volumes (uint8_t);
-void write_to_song (note_t);
-int read_from_song (u_int16_t, u_int16_t, u_int16_t, u_int16_t, note_t*);
 
 
 

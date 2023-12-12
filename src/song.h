@@ -1,0 +1,16 @@
+/** @file song.h
+ *
+ * @brief This file defines prototypes of functions inside song.c
+ *
+ */
+
+
+void write_to_song (note_t);
+note_t* read_from_song (u_int16_t, u_int16_t, u_int16_t, u_int16_t, int*);
+void test_write ();
+void test_read ();
+void display_song (int, note_t *, char *);
+
+
+
+
