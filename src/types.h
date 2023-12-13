@@ -52,6 +52,7 @@
 #define KBD		1
 #define OUT		2
 #define SONG_SIZE	10000		// max number of notes for a song
+#define COPY_SIZE	1000		// max number of notes for copy buffer
 
 /* list management (used for led mgmt) */
 #define LIST_ELT 100
@@ -63,6 +64,10 @@
 #define SIXTEENTH		3
 #define THIRTY_SECOND	4
 
+/* copy_cut values */
+#define COPY		0
+#define	CUT			1
+#define DEL			2
 
 /* types */
 // each note consists in this structure : 66 bytes - TBD whether it needs to be optimized

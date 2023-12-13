@@ -131,3 +131,5 @@ uint8_t led_ui_select (int lim1, int lim2) {
 	return (start);
 }
 
+
+// **************HERE: we should have a routine that scans the song and sets bars buffer accordingly

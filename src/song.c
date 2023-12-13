@@ -344,3 +344,109 @@ void display_song (int lg, note_t *sg, char * st) {
 	}
 	printf ("\n");
 }
+
+
+// copy & cut bar functionality. It copies from b_limit1 (inclusive) to b_limit2 (exclusive).
+// it copies only the notes from a single instrument, and stores this into a copy-paste buffer
+// at the end of the process, notes are copied to copy buffer, and copy_length is set to proper copy buffer length
+// corresponding notes in the song are erased from the song
+// depending on a parameter, the function can either copy only, copy and erase (cut), erase only
+void copy_cut (u_int16_t b_limit1, u_int16_t b_limit2, int instr, int mode) {
+
+	note_t *note;	// pointer to notes in the song to be copied
+	int lg;			// number of notes copied from song
+	int i;
+
+	// get all the bars from the song which are between b_limit1 (inclusive) and b_limit2 (exclusive) 
+	note = read_from_song (b_limit1, 0, b_limit2, 0, &lg);
+
+	if ((mode == COPY) || (mode == CUT)) copy_length = 0;		// reset copy buffer only for copy or cut
+	for (i=0; i<lg; i++) {
+		// go through the notes and determine whether these have the right instrument and should be copied
+		if (note [i].instrument == instr) {
+			if ((mode == COPY) || (mode == CUT)) {
+				// copy the note to the copy buffer
+				memcpy (&copy_buffer [copy_length], &note [i], sizeof (note_t));		// no issue in using memcpy as memory should not overlap
+				// correct the bar number in copy buffer so bar_limit1 is now 0
+				copy_buffer [copy_length].bar = copy_buffer [copy_length].bar - b_limit1;
+				copy_length++;
+			}
+
+			if ((mode == CUT) || (mode == DEL)) {
+				// set 0xFFFF in bar number of note, so we can erase it afterwards
+				note [i].bar = 0xFFFF;
+			}
+		}
+	}
+
+	if (mode == COPY) return;		// leave in case of simple copy operation
+
+	// here, the mode is CUT or DEL: we delete the notes in the song
+	// go through the whole song to remove cut notes from the song
+	for (i=0; i<song_length; i++) {
+		if (note [i].bar == 0xFFFF) {
+			// note shall be removed
+			// overwrite current note with rest of song
+
+			// check if rest of song exists before doing this
+			if (i < (song_length - 1)) memmove (&note [i], &note [i + 1], (song_length - (i + 1)) * sizeof (note_t));
+			song_length--;		// song has one note less
+			i--;				// required as we need to parse same note on next loop
+		}
+	}
+
+	// clear the rest of song space, to remove crap
+	memset (&note [song_length], 0, (SONG_SIZE - song_length) * sizeof (note_t));
+
+	// set the ui leds according to removed bars
+	// no, we will do this in the main process instead
+}
+
+
+// copy bar functionality. It copies from b_limit1 (inclusive) to b_limit2 (exclusive).
+// it copies only the notes from a single instrument, and stores this into a copy-paste buffer
+// at the end of the process, notes are copied to copy buffer, and copy_length is set to proper copy buffer length
+void copy (u_int16_t b_limit1, u_int16_t b_limit2, int instr) {
+
+	copy_cut (b_limit1, b_limit2, instr, COPY);
+}
+
+
+// cut bar functionality. It copies from b_limit1 (inclusive) to b_limit2 (exclusive).
+// it copies only the notes from a single instrument, and stores this into a copy-paste buffer
+// at the end of the process, notes are copied to copy buffer, and copy_length is set to proper copy buffer length
+// corresponding notes are erased from the song
+void cut (u_int16_t b_limit1, u_int16_t b_limit2, int instr) {
+
+	copy_cut (b_limit1, b_limit2, instr, CUT);
+}
+
+
+// paste bar functionality. It copies the full copy buffer to b_limit1 (inclusive).
+// at the end of the process, copy_buffer is not emptied
+void paste (u_int16_t b_limit1, int instr) {
+
+	note_t note;		// temp note
+	int i;
+	uint16_t b_limit2;	// exclusive limit where to stop erasing
+
+	// make sure copy_buffer has some content; if not, then leave
+	// this is required to avoid issue with the erasing/deletion of bars
+	if (copy_length == 0) return;
+
+	// erase the content of bars before pasting new stuff: we don't do overdubbing
+	// you can remove this section to do paste + overdubbing (without erasing bars first)
+	b_limit2 = (copy_buffer [copy_length - 1].bar) + 1;		// b_limit2 is last bar in copy buffer + 1 (as it is exclusive)
+	copy_cut (b_limit1, b_limit2, instr, DEL);				// erase corresponding bars in the song
+	// stop removing here
+
+	for (i=0; i<copy_length; i++) {
+		// take note from copy_buffer and store it in a temporary space
+		memcpy (&note, &copy_buffer [i], sizeof (note_t));
+		// correct bar so it matches to destination bar, correct instrument to match destination instrument
+		note.bar += b_limit1;
+		note.instrument = instr;
+		// add to song
+		write_to_song (note);
+	}
+}

@@ -53,6 +53,8 @@ uint8_t ui_select_previous [64];		// buffer to store pads during selection proce
 // song structure
 note_t song [SONG_SIZE];			// assume song will have less than 10000 notes in it
 int song_length;					// highest index in song []
+note_t copy_buffer [COPY_SIZE];		// copy-paste buffer
+int copy_length;					// highest index in copy_buffer []
 
 // status variables
 int is_play;						// play is in progress

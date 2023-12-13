@@ -134,6 +134,7 @@ int process ( jack_nframes_t nframes, void *arg )
 	/**************************************/
 
 	ch = getch();
+if (ch !=0xFF) printf ("char: %02X\n", ch);
 	switch (ch) {
 		case 'P':
 			// status variable
@@ -194,8 +195,6 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 
 		// add quantized note to song
 		write_to_song (note);
-
-
 	}
 }
 

@@ -50,6 +50,8 @@ extern uint8_t ui_select_previous [64];		// buffer to store pads during selectio
 // song structure
 extern note_t song [SONG_SIZE];			// assume song will have less than 10000 notes in it
 extern int song_length;					// highest index in song []
+extern note_t copy_buffer [COPY_SIZE];	// copy-paste buffer
+extern int copy_length;					// highest index in copy_buffer []
 
 // status variables
 extern int is_play;						// play is in progress

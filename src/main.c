@@ -33,6 +33,8 @@ static void init_globals ( )
 	memset (out_list, 0, LIST_ELT * 3);
 	// empty song structure
 	memset (song, 0, SONG_SIZE * sizeof (note_t));
+	// empty copy_buffer structure
+	memset (copy_buffer, 0, COPY_SIZE * sizeof (note_t));
 	// fill UI structures with start values to set up leds
 	memset (ui_instruments, LO_GREEN, 8);
 	memset (ui_pages, LO_GREEN, 8);
@@ -56,11 +58,11 @@ static void init_globals ( )
 	ui_limit2_pressed = FALSE;
 
 	// init ncurses for non-blocking key capture
-//	initscr();				// init curses, 
-//	nodelay(stdscr, TRUE);	// no delaying, no blocking
-//	noecho();				// no echoing
-//	cbreak ();				// no buffering
-//	keypad (stdscr, TRUE);	// special keys can be captured
+	initscr();				// init curses, 
+	nodelay(stdscr, TRUE);	// no delaying, no blocking
+	noecho();				// no echoing
+	cbreak ();				// no buffering
+	keypad (stdscr, TRUE);	// special keys can be captured
 
 	// init quantization engine
 	quantizer = THIRTY_SECOND;
@@ -70,6 +72,7 @@ static void init_globals ( )
 	is_play = FALSE;
 	is_record = FALSE;
 	song_length = 0;		// indicates length of the song (highest index in song [])
+	copy_length = 0;		// length of copy buffer: empty
 }
 
 
@@ -240,13 +243,12 @@ int main ( int argc, char *argv[] )
 
 	/* go through the list of ports to be connected and connect them by pair (server, client) */
 	/* fixed devices and fluidsynth output */
-/*	if ( jack_connect ( client, "a2j:Launchpad Mini (capture): Launchpad Mini MIDI 1", "compo.a:midi_UI_in") ) {
+	if ( jack_connect ( client, "a2j:Launchpad Mini (capture): Launchpad Mini MIDI 1", "compo.a:midi_UI_in") ) {
 			fprintf ( stderr, "cannot connect ports (between client and server).\n" );
 	}
 	if ( jack_connect ( client, "compo.a:midi_UI_out", "a2j:Launchpad Mini (playback): Launchpad Mini MIDI 1") ) {
 			fprintf ( stderr, "cannot connect ports (between client and server).\n" );
 	}
-*/
 	if ( jack_connect ( client, "a2j:MPK Mini Mk II (capture): MPK Mini Mk II MIDI 1", "compo.a:midi_KBD_in") ) {
 			fprintf ( stderr, "cannot connect ports (between client and server).\n" );
 	}
