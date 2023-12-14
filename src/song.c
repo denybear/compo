@@ -226,6 +226,76 @@ note_t * read_from_song (u_int16_t b_limit1, u_int16_t t_limit1, u_int16_t b_lim
 
 
 // for debug use only
+void test_copy_paste () {
+
+	test_write ();
+
+
+	copy (0, 1, 1);
+	display_song (copy_length, copy_buffer, "test: copy area that does not exist");
+
+	copy (3, 4, 1);
+	display_song (copy_length, copy_buffer, "test: copy 1st bar that exists but instr does not exist");
+
+	copy (3, 4, 2);
+	display_song (copy_length, copy_buffer, "test: copy 1st bar that exists and instr does exist");
+
+	copy (4, 5, 7);
+	display_song (copy_length, copy_buffer, "test: copy bar that exists and instr does exist");
+
+	copy (4, 5, 2);
+	display_song (copy_length, copy_buffer, "test: copy 2 bars in the middle of song");
+
+	copy (6, 7, 2);
+	display_song (copy_length, copy_buffer, "test: copy 2 bars at end of song");
+
+
+
+	cut (0, 1, 1);
+	display_song (song_length, song, "0, 1, 1 test: cut area that does not exist");
+	paste (10, 7);
+	display_song (song_length, song, "10, 7 test: try to paste bar 10, instr 7");
+
+	cut (3, 4, 1);
+	display_song (song_length, song, "3, 4, 1 test: cut 1st bar that exists but instr does not exist");
+	paste (10, 7);
+	display_song (song_length, song, "10, 7 test: try to paste bar 10, instr 7");
+
+	cut (3, 4, 2);
+	display_song (song_length, song, "3, 4, 2 test: cut 1st bar that exists and instr does exist");
+	paste (10, 1);
+	display_song (song_length, song, "10, 1 test: paste bar 10, instr 7");
+
+	cut (4, 5, 7);
+	display_song (song_length, song, "4, 5, 7 test: cut bar that exists and instr does exist");
+	paste (4, 7);
+	display_song (song_length, song, "4, 7 test: paste same place, same instr");
+
+	cut (4, 5, 2);
+	display_song (song_length, song, "4, 5, 2 test: cut 2 bars in the middle of song");
+	paste (2, 0);
+	display_song (song_length, song, "2, 0 test: paste 1st bar of song");
+
+	cut (6, 7, 2);
+	display_song (song_length, song, "6, 7, 2 test: cut 2 bars near end of song");
+	paste (5, 1);
+	display_song (song_length, song, "5, 1 test: paste in middle of song");
+
+	cut (5, 20, 1);
+	display_song (song_length, song, "5, 20, 1 test: cut 3 bars mid of song");
+	display_song (copy_length, copy_buffer, "test: content of copy buffer");
+	paste (30, 2);
+	display_song (song_length, song, "30, 2 test: paste at end of song");
+
+	cut (29, 31, 2);
+	display_song (song_length, song, "29, 31, 2 test: cut 3 bars near end of song");
+	display_song (copy_length, copy_buffer, "test: content of copy buffer");
+	paste (0, 6);
+	display_song (song_length, song, "0, 6 test: paste at start of song, bar shall be 1");
+}
+
+
+// for debug use only
 void test_write () {
 
 	note_t note;
@@ -384,19 +454,19 @@ void copy_cut (u_int16_t b_limit1, u_int16_t b_limit2, int instr, int mode) {
 	// here, the mode is CUT or DEL: we delete the notes in the song
 	// go through the whole song to remove cut notes from the song
 	for (i=0; i<song_length; i++) {
-		if (note [i].bar == 0xFFFF) {
+		if (song [i].bar == 0xFFFF) {
 			// note shall be removed
 			// overwrite current note with rest of song
 
 			// check if rest of song exists before doing this
-			if (i < (song_length - 1)) memmove (&note [i], &note [i + 1], (song_length - (i + 1)) * sizeof (note_t));
+			if (i < (song_length - 1)) memmove (&song [i], &song [i + 1], (song_length - (i + 1)) * sizeof (note_t));
 			song_length--;		// song has one note less
 			i--;				// required as we need to parse same note on next loop
 		}
 	}
 
 	// clear the rest of song space, to remove crap
-	memset (&note [song_length], 0, (SONG_SIZE - song_length) * sizeof (note_t));
+	memset (&song [song_length], 0, (SONG_SIZE - song_length) * sizeof (note_t));
 
 	// set the ui leds according to removed bars
 	// no, we will do this in the main process instead

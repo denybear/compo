@@ -131,8 +131,7 @@ int pull_from_list (int device, uint8_t * buffer) {
 // compute BBT based on nframes, tempo (BPM), frame rate, etc.
 // based on new_pos value:
 // 0 : compute BBT based on previous values of BBT & fram rate
-// 1 : compute BBT based on start of Jack
-// 2 : compute BBT, and sets position as 1, 1, 1
+// 1 : compute BBT, and sets position as ui_current_bar, 0, 0
 // requires jack_position_t * which will contain the BBT information
 void compute_bbt (jack_nframes_t nframes, jack_position_t *pos, int new_pos)
 {

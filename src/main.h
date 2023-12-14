@@ -16,7 +16,8 @@ float time_beats_per_bar = 4.0;
 float time_beat_type = 4.0;
 double time_ticks_per_beat = 480.0;
 double time_beats_per_minute = 120.0;
-jack_position_t time_position;			// structure that contains BBT for the playing / recording 
+jack_position_t time_position;				// structure that contains BBT for the playing / recording 
+jack_position_t previous_time_position;		// structure that contains BBT for the playing / recording 
 
 // define midi ports
 jack_port_t *midi_UI_in, *midi_UI_out;

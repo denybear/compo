@@ -13,12 +13,6 @@
 #include "song.h"
 
 
-// number of midi clock signal sent per quarter note; from 0 to 23
-int midi_clock_num;
-// previous index pulse: used to see whether we changed quarter note (beat)
-int previous_index_pulse;
-
-
 // main process callback called at capture of (nframes) frames/samples
 int process ( jack_nframes_t nframes, void *arg )
 {
@@ -134,15 +128,17 @@ int process ( jack_nframes_t nframes, void *arg )
 	/**************************************/
 
 	ch = getch();
-if (ch !=0xFF) printf ("char: %02X\n", ch);
+//if (ch !=0xFF) printf ("char: %02X\n", ch);
 	switch (ch) {
-		case 'P':
+		case 'p':
 			// status variable
 			is_play = is_play ? FALSE : TRUE;
 			// reset BBT position
 			compute_bbt (nframes, &time_position, TRUE);
+			// copy BBT to previous position as well
+			memcpy (&previous_time_position, &time_position, sizeof (jack_position_t));
 			break;
-		case 'R':
+		case 'r':
 			// status variable
 			is_record = is_record ? FALSE : TRUE;
 			break;
@@ -161,6 +157,8 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 	int temp;
 	uint8_t buffer [4];
 	note_t note;
+	note_t *notes_to_play;
+	int lg;
 
 
 	buffer [0] = event->buffer [0];
@@ -195,7 +193,49 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 
 		// add quantized note to song
 		write_to_song (note);
+
+		// we don't do any UI yet
 	}
+
+	// in case playing is on
+	if (is_play) {
+
+		// read song to determine whether there are some notes to play
+		notes_to_play = read_from_song (previous_time_position.bar, previous_time_position.tick, time_position.bar, time_position.tick, &lg);
+		// copy current BBT position to previous BBT position
+		memcpy (&previous_time_position, &time_position, sizeof (jack_position_t));
+
+		// go through the notes that we shall play
+		for (i=0; i<lg; i++) {
+// HERE
+		}
+
+
+
+		// fill-in note structure
+		note.already_played = TRUE;
+		note.instrument = ui_current_instrument;
+		note.bar = time_position.bar;
+		note.beat = time_position.beat;
+		note.tick = quantize (time_position.tick, quantizer);
+		// check whether tick is on next bar or not
+		if (note.tick == 0xFFFFFFFF) {
+			// check boundaries of bar
+			if (time_position.bar < 511) note.bar = time_position.bar + 1;
+			else note.bar = 0;
+			note.beat = 0;
+			note.tick = 0;
+		}
+		note.status = buffer [0];		// midi command + midi channel
+		note.key = buffer [1];
+		note.vel = buffer [2];
+
+		// add quantized note to song
+		write_to_song (note);
+
+		// we don't do any UI yet
+	}
+
 }
 
 // process callback called to process midi_in events from UI in realtime

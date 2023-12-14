@@ -131,5 +131,21 @@ uint8_t led_ui_select (int lim1, int lim2) {
 	return (start);
 }
 
+// go through the whole song, and set the "bars" tables of leds accordingly (depending a bar exists or not)
+void refresh_ui_bars () {
 
-// **************HERE: we should have a routine that scans the song and sets bars buffer accordingly
+	int i;
+	int instr, page, bar;
+
+	// fill UI structure with start values to set up leds
+	memset (ui_bars, BLACK, 8 * 8 * 64);
+
+	for (i = 0; i <song_length; i++) {
+		// values
+		instr = song [i].instrument;
+		page = song [i].bar / 64;		// 64 bars per page
+		bar = song [i].bar % 64;
+
+		ui_bars [instr][page][bar] = LO_AMBER;		// to change to bar color when we will implement the functionality
+	}
+}

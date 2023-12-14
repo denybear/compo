@@ -14,6 +14,7 @@ extern float time_beat_type;
 extern double time_ticks_per_beat;
 extern double time_beats_per_minute;
 extern jack_position_t time_position;			// structure that contains BBT for the playing / recording 
+extern jack_position_t previous_time_position;	// structure that contains BBT for the playing / recording 
 
 // define midi ports
 extern jack_port_t *midi_UI_in, *midi_UI_out;

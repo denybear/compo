@@ -7,6 +7,7 @@
 
 void write_to_song (note_t);
 note_t* read_from_song (u_int16_t, u_int16_t, u_int16_t, u_int16_t, int*);
+void test_copy_paste ();
 void test_write ();
 void test_read ();
 void display_song (int, note_t *, char *);
