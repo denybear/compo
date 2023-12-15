@@ -53,14 +53,19 @@ extern note_t song [SONG_SIZE];			// assume song will have less than 10000 notes
 extern int song_length;					// highest index in song []
 extern note_t copy_buffer [COPY_SIZE];	// copy-paste buffer
 extern int copy_length;					// highest index in copy_buffer []
+extern note_t metronome [8];			// metronome: 4 note-on, 4 note-off
 
 // status variables
 extern int is_play;						// play is in progress
-extern int is_record;					// record is in progress 
+extern int is_record;					// record is in progress
+extern int is_metronome;				// metronome is in progress
 
 // quantization variables
 extern int quantizer;						// contains value used for quantization
 extern uint32_t quantization_range [5][40];	// table used to store quantization parameters : range where note should be in
 extern uint32_t quantization_value [5][40];	// table used to store quantization parameters : exact value note should take to be quantized
+
+// tap tempo functionality
+extern jack_nframes_t tap1, tap2;			// used to calculate tap tempo
 
 

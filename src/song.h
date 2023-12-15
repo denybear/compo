@@ -15,6 +15,8 @@ void copy_cut (u_int16_t, u_int16_t, int, int);
 void copy (u_int16_t, u_int16_t, int);
 void cut (u_int16_t, u_int16_t, int);
 void paste (u_int16_t, int);
+void create_metronome ();
+
 
 
 

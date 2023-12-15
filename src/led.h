@@ -4,6 +4,7 @@
  *
  */
 
+int color_ui_cursor ();
 void led_ui_instruments ();
 void led_ui_pages ();
 void led_ui_bars (int, int);

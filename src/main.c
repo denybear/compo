@@ -68,11 +68,17 @@ static void init_globals ( )
 	quantizer = THIRTY_SECOND;
 	create_quantization_tables ();		// create all the tables used for quantization
 
+	// create metronome table
+	create_metronome ();
+
 	// set other variables
 	is_play = FALSE;
 	is_record = FALSE;
+	is_metronome = FALSE;
 	song_length = 0;		// indicates length of the song (highest index in song [])
 	copy_length = 0;		// length of copy buffer: empty
+	tap1 = 0;				// tap tempo
+	tap2 = 0;
 }
 
 

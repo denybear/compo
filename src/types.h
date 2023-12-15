@@ -40,6 +40,7 @@
 #define MIDI_NOTEOFF	0x80
 #define MIDI_CC			0xB0
 #define MIDI_PC			0xC0
+#define MIDI_1BYTE		0xF0
 #define MIDI_CLOCK		0xF8
 #define MIDI_RESERVED	0xF9
 #define MIDI_PLAY		0xFA

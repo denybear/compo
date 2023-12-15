@@ -25,7 +25,6 @@ int process ( jack_nframes_t nframes, void *arg )
 	char ch;								// used to read keys from UI keyboard (not music MIDI keyboard)
 	note_t *notes_to_play;
 	int lg;
-	uint8_t midi_buffer [4];
 
 
 
@@ -39,21 +38,33 @@ int process ( jack_nframes_t nframes, void *arg )
 
 		// read song to determine whether there are some notes to play
 		notes_to_play = read_from_song (previous_time_position.bar, previous_time_position.tick, time_position.bar, time_position.tick, &lg);
-		// copy current BBT position to previous BBT position
-		memcpy (&previous_time_position, &time_position, sizeof (jack_position_t));
 
 		// go through the notes that we shall play
 		for (i=0; i<lg; i++) {
-			midi_buffer [0] = (notes_to_play [i].status) | (instr2chan (notes_to_play [i].instrument));
-			midi_buffer [1] = notes_to_play [i].key;
-			midi_buffer [2] = notes_to_play [i].vel;
-			// send midi command out to play note
-			push_to_list (OUT, midi_buffer);
+			if (notes_to_play [i].already_played == TRUE) {
+				// note was already played "live", no need to replay it this time; but shall be replayed next time
+				notes_to_play [i].already_played == FALSE;
+			}
+			else {
+				// note was not played live; play it
+				buffer [0] = (notes_to_play [i].status) | (instr2chan (notes_to_play [i].instrument));
+				buffer [1] = notes_to_play [i].key;
+				buffer [2] = notes_to_play [i].vel;
+				// send midi command out to play note
+				push_to_list (OUT, buffer);
+			}
 		}
 
-		// we don't do any UI yet
-	}
+		// HERE: PLAY METRONOME
+		
 
+		// do the UI: cursor shall progress with the bar
+		ui_current_bar = previous_time_position.bar;
+		led_ui_select (ui_current_bar, ui_current_bar);
+
+		// copy current BBT position to previous BBT position
+		memcpy (&previous_time_position, &time_position, sizeof (jack_position_t));
+	}
 
 
 	/***************************************/
@@ -77,7 +88,7 @@ int process ( jack_nframes_t nframes, void *arg )
 	/*******************************************/
 	/* Second, process MIDI out events (music) */
 	/*******************************************/
-
+²
 	// define midi out port to write to
 	midiout = jack_port_get_buffer (midi_out, nframes);
 
@@ -86,12 +97,8 @@ int process ( jack_nframes_t nframes, void *arg )
 
 	//go through the list of midi requests
 	while (pull_from_list (OUT, buffer)) {
-		// if buffer is not empty, then send as midi out event
-		if (buffer [0] | buffer [1] | buffer [2]) {
-			// if midi command is Program Change (to change instrument), then send 2 bytes, else send 3 bytes
-			if ((buffer [0] & 0xF0) == MIDI_PC) jack_midi_event_write (midiout, 0, buffer, 2);
-			else jack_midi_event_write (midiout, 0, buffer, 3);
-		}
+		// send midi stream
+		midi_write (midiout, 0, buffer);
 	}
 
 
@@ -107,11 +114,10 @@ int process ( jack_nframes_t nframes, void *arg )
 
 	//go through the list of led requests
 	while (pull_from_list (KBD, buffer)) {
-		// if buffer is not empty, then send as midi out event
-		if (buffer [0] | buffer [1] | buffer [2]) {
-			jack_midi_event_write (midiout, 0, buffer, 3);
-		}
+		// send midi stream
+		midi_write (midiout, 0, buffer);
 	}
+
 
 	/***************************************/
 	/* Fourth, process MIDI in (UI) events */
@@ -143,10 +149,8 @@ int process ( jack_nframes_t nframes, void *arg )
 
 	//go through the list of led requests
 	while (pull_from_list (UI, buffer)) {
-		// if buffer is not empty, then send as midi out event
-		if (buffer [0] | buffer [1] | buffer [2]) {
-			jack_midi_event_write (midiout, 0, buffer, 3);
-		}
+		// send midi stream
+		midi_write (midiout, 0, buffer);
 	}
 
 
@@ -157,7 +161,7 @@ int process ( jack_nframes_t nframes, void *arg )
 	ch = getch();
 //if (ch !=0xFF) printf ("char: %02X\n", ch);
 	switch (ch) {
-		case 'p':
+		case 'p':	// PLAY
 			// status variable
 			is_play = is_play ? FALSE : TRUE;
 printf ("play:%d\n", is_play);
@@ -166,11 +170,33 @@ printf ("play:%d\n", is_play);
 			// copy BBT to previous position as well
 			memcpy (&previous_time_position, &time_position, sizeof (jack_position_t));
 			break;
-		case 'r':
+		case 'r':	// RECORD
 			// status variable
 			is_record = is_record ? FALSE : TRUE;
 printf ("record:%d\n", is_record);
 			break;
+		case 't':	// TAP TEMPO
+			if (tap1 == 0) {
+				tap1 = jack_last_frame_time(client);
+				tap2 = 0;
+			}
+			else tap2 = jack_last_frame_time(client);
+			
+			// determine timing between taps, and therefore tempo
+			if ((tap1 != 0) && (tap2 != 0)) {
+				// formula to determine BPM
+				// 48000 * 60 samples --> 1 min
+				// 1 beat = X samples --> X / (48000 * 60) min
+				// 1 min --> ((48000 * 60) / X) beats = BPM 
+print ("time diff: %ld %ld\n", tap1, tap2);
+				time_beats_per_minute = (int) ((jack_get_sample_rate (client) * 60.0) / (tap2 - tap1));
+
+				// prepare for next call
+				tap1 = tap2;
+			}
+			break;
+		case 'm':	// METRONOME ON/OFF
+			is_metronome = is_metronome ? FALSE : TRUE;
 		default:
 			break;
 	}
@@ -218,7 +244,7 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 		// add quantized note to song
 		write_to_song (note);
 
-		// we don't do any UI yet
+		// we don't do any UI yet as UI is done in the "play" section
 	}
 }
 

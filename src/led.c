@@ -12,6 +12,14 @@
 #include "song.h"
 
 
+// returns the color of the "bar" cursor
+int color_ui_cursor () {
+	
+	if (is_record) return HI_RED;
+	return HI_GREEN;
+}
+
+
 // light the "instruments" row of leds
 void led_ui_instruments () {
 	int i;
@@ -107,7 +115,7 @@ uint8_t led_ui_select (int lim1, int lim2) {
 	// display selection in high green in the display buffer
 	i = start;
 	while (i <= end ) {
-		ui_select [i] = HI_GREEN;
+		ui_select [i] = color_ui_cursor ();
 		i++;
 	}
 
@@ -118,7 +126,7 @@ uint8_t led_ui_select (int lim1, int lim2) {
 			// this pad was lit, but should now be unlit
 			led_ui_bar (ui_current_instrument, ui_current_page, i);
 		}
-		if ((ui_select_previous [i] == BLACK) && (ui_select [i] == HI_GREEN)) {
+		if ((ui_select_previous [i] == BLACK) && (ui_select [i] == color_ui_cursor () )) {
 			// light pad in case it was not lit previously
 			led_ui_bar (ui_current_instrument, ui_current_page, i);
 		}

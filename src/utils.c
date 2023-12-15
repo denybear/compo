@@ -128,6 +128,31 @@ int pull_from_list (int device, uint8_t * buffer) {
 }
 
 
+// determines the length of midi bytes to send, and call jack_midi_event_write() to send them
+int midi_write (void *port_buffer, jack_nframes_t time, jack_midi_data_t *buffer) {
+
+	int lg;		// length of data to be sent
+
+	// if buffer is not empty, then send as midi out event
+	if (buffer [0] | buffer [1] | buffer [2]) {
+		switch (buffer [0] & 0xF0) {
+			case MIDI_PC:
+				lg = 2;
+				break;
+			case MIDI_1BYTE:
+				lg = 1;
+			default:
+				lg = 3;
+				break;
+		}
+		// send to midi
+		return (jack_midi_event_write (port_buffer, time, buffer, lg));
+	}
+
+	return 0;
+}
+
+
 // compute BBT based on nframes, tempo (BPM), frame rate, etc.
 // based on new_pos value:
 // 0 : compute BBT based on previous values of BBT & fram rate

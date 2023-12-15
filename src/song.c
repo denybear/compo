@@ -520,3 +520,63 @@ void paste (u_int16_t b_limit1, int instr) {
 		write_to_song (note);
 	}
 }
+
+
+// create metromone table
+void create_metronome () {
+	
+	note_t note;
+	double half_time_ticks_per_beat;
+	
+	// time for triggering note-off
+	half_time_ticks_per_beat = time_ticks_per_beat / 2;
+	
+	// create 1 single bar only of metronome (this is enough)
+	// note 1 on
+	note.already_played = FALSE;
+	note.instrument = 0;			// instrument 0 is the drum
+	note.bar = 0;
+	note.beat = 0;
+	note.tick = (uint16_t) (0);
+	note.status = MIDI_NOTEON;
+	note.key = 76;					// high wood block
+	note.vel = 64;
+	memcpy (&metromone [0], &note, sizeof (note_t));
+
+	// note 1 off
+	note.tick = (uint16_t) (half_time_ticks_per_beat);
+	note.status = MIDI_NOTEOFF;
+	memcpy (&metromone [1], &note, sizeof (note_t));
+
+	// note 2 on
+	note.tick = (uint16_t) (time_ticks_per_beat);
+	note.status = MIDI_NOTEON;
+	note.key = 77;					// low wood block
+	memcpy (&metromone [2], &note, sizeof (note_t));
+
+	// note 2 off
+	note.tick = (uint16_t) (time_ticks_per_beat + half_time_ticks_per_beat);
+	note.status = MIDI_NOTEOFF;
+	memcpy (&metromone [3], &note, sizeof (note_t));
+
+	// note 3 on
+	note.tick = (uint16_t) (2 * time_ticks_per_beat);
+	note.status = MIDI_NOTEON;
+	memcpy (&metromone [4], &note, sizeof (note_t));
+
+	// note 3 off
+	note.tick = (uint16_t) ((2 * time_ticks_per_beat) + half_time_ticks_per_beat);
+	note.status = MIDI_NOTEOFF;
+	memcpy (&metromone [5], &note, sizeof (note_t));
+
+	// note 4 on
+	note.tick = (uint16_t) (3 * time_ticks_per_beat);
+	note.status = MIDI_NOTEON;
+	memcpy (&metromone [6], &note, sizeof (note_t));
+
+	// note 4 off
+	note.tick = (uint16_t) ((3 * time_ticks_per_beat) + half_time_ticks_per_beat);
+	note.status = MIDI_NOTEOFF;
+	memcpy (&metromone [7], &note, sizeof (note_t));
+
+}
