@@ -77,7 +77,7 @@ typedef struct {
 	uint16_t bar;
 	uint8_t beat;
 	uint16_t tick;
-	uint8_t status;		// MIDI cmd + channel
+	uint8_t status;		// MIDI cmd only, not the channel
 	uint8_t key;
 	uint8_t vel;
 } note_t;

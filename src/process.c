@@ -23,12 +23,37 @@ int process ( jack_nframes_t nframes, void *arg )
 	jack_midi_data_t buffer[5];				// midi out buffer for lighting the pad leds and for midi clock
 	int dest, row, col, on_off;				// variables used to manage lighting of the pad leds
 	char ch;								// used to read keys from UI keyboard (not music MIDI keyboard)
+	note_t *notes_to_play;
+	int lg;
+	uint8_t midi_buffer [4];
 
 
-	/***********************************************************/
-	/* Step 0, compute BBT (but only if we are playing a song) */
-	/***********************************************************/
-	if (is_play) compute_bbt (nframes, &time_position, FALSE);
+
+
+	/*************************************/
+	/* Step 0, compute BBT and play song */
+	/*************************************/
+	if (is_play) {
+		// compute BBT
+		compute_bbt (nframes, &time_position, FALSE);
+
+		// read song to determine whether there are some notes to play
+		notes_to_play = read_from_song (previous_time_position.bar, previous_time_position.tick, time_position.bar, time_position.tick, &lg);
+		// copy current BBT position to previous BBT position
+		memcpy (&previous_time_position, &time_position, sizeof (jack_position_t));
+
+		// go through the notes that we shall play
+		for (i=0; i<lg; i++) {
+			midi_buffer [0] = (notes_to_play [i].status) | (instr2chan (notes_to_play [i].instrument));
+			midi_buffer [1] = notes_to_play [i].key;
+			midi_buffer [2] = notes_to_play [i].vel;
+			// send midi command out to play note
+			push_to_list (OUT, midi_buffer);
+		}
+
+		// we don't do any UI yet
+	}
+
 
 
 	/***************************************/
@@ -133,6 +158,7 @@ int process ( jack_nframes_t nframes, void *arg )
 		case 'p':
 			// status variable
 			is_play = is_play ? FALSE : TRUE;
+printf ("play:%d\n", is_play);
 			// reset BBT position
 			compute_bbt (nframes, &time_position, TRUE);
 			// copy BBT to previous position as well
@@ -141,6 +167,7 @@ int process ( jack_nframes_t nframes, void *arg )
 		case 'r':
 			// status variable
 			is_record = is_record ? FALSE : TRUE;
+printf ("record:%d\n", is_record);
 			break;
 		default:
 			break;
@@ -153,12 +180,8 @@ int process ( jack_nframes_t nframes, void *arg )
 // process callback called to process midi_in events from KBD in realtime
 int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 
-	int i;
-	int temp;
 	uint8_t buffer [4];
 	note_t note;
-	note_t *notes_to_play;
-	int lg;
 
 
 	buffer [0] = event->buffer [0];
@@ -187,55 +210,14 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 			note.beat = 0;
 			note.tick = 0;
 		}
-		note.status = buffer [0];		// midi command + midi channel
+		note.status = buffer [0] & 0xF0;		// midi command only, no midi channel (it is set at play time)
 		note.key = buffer [1];
 		note.vel = buffer [2];
-
 		// add quantized note to song
 		write_to_song (note);
 
 		// we don't do any UI yet
 	}
-
-	// in case playing is on
-	if (is_play) {
-
-		// read song to determine whether there are some notes to play
-		notes_to_play = read_from_song (previous_time_position.bar, previous_time_position.tick, time_position.bar, time_position.tick, &lg);
-		// copy current BBT position to previous BBT position
-		memcpy (&previous_time_position, &time_position, sizeof (jack_position_t));
-
-		// go through the notes that we shall play
-		for (i=0; i<lg; i++) {
-// HERE
-		}
-
-
-
-		// fill-in note structure
-		note.already_played = TRUE;
-		note.instrument = ui_current_instrument;
-		note.bar = time_position.bar;
-		note.beat = time_position.beat;
-		note.tick = quantize (time_position.tick, quantizer);
-		// check whether tick is on next bar or not
-		if (note.tick == 0xFFFFFFFF) {
-			// check boundaries of bar
-			if (time_position.bar < 511) note.bar = time_position.bar + 1;
-			else note.bar = 0;
-			note.beat = 0;
-			note.tick = 0;
-		}
-		note.status = buffer [0];		// midi command + midi channel
-		note.key = buffer [1];
-		note.vel = buffer [2];
-
-		// add quantized note to song
-		write_to_song (note);
-
-		// we don't do any UI yet
-	}
-
 }
 
 // process callback called to process midi_in events from UI in realtime
