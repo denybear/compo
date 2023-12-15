@@ -84,11 +84,13 @@ int process ( jack_nframes_t nframes, void *arg )
 	// clear midi write buffer
 	jack_midi_clear_buffer (midiout);
 
-	//go through the list of led requests
+	//go through the list of midi requests
 	while (pull_from_list (OUT, buffer)) {
 		// if buffer is not empty, then send as midi out event
 		if (buffer [0] | buffer [1] | buffer [2]) {
-			jack_midi_event_write (midiout, 0, buffer, 3);
+			// if midi command is Program Change (to change instrument), then send 2 bytes, else send 3 bytes
+			if ((buffer [0] & 0xF0) == MIDI_PC) jack_midi_event_write (midiout, 0, buffer, 2);
+			else jack_midi_event_write (midiout, 0, buffer, 3);
 		}
 	}
 

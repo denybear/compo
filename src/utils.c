@@ -240,9 +240,9 @@ void init_instruments () {
 			buffer [0] = MIDI_PC | chan;
 			buffer [1] = instr [i];
 			buffer [2] = 0;
-		}
 
-		push_to_list (OUT, buffer);			// put in midi send buffer to assign instruments to midi channels
+			push_to_list (OUT, buffer);			// put in midi send buffer to assign instruments to midi channels
+		}
 	}
 }
 
