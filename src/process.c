@@ -88,7 +88,7 @@ int process ( jack_nframes_t nframes, void *arg )
 	/*******************************************/
 	/* Second, process MIDI out events (music) */
 	/*******************************************/
-²
+
 	// define midi out port to write to
 	midiout = jack_port_get_buffer (midi_out, nframes);
 
@@ -188,9 +188,7 @@ printf ("record:%d\n", is_record);
 				// 48000 * 60 samples --> 1 min
 				// 1 beat = X samples --> X / (48000 * 60) min
 				// 1 min --> ((48000 * 60) / X) beats = BPM 
-print ("time diff: %ld %ld\n", tap1, tap2);
 				time_beats_per_minute = (int) ((jack_get_sample_rate (client) * 60.0) / (tap2 - tap1));
-
 				// prepare for next call
 				tap1 = tap2;
 			}
