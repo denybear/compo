@@ -55,11 +55,29 @@ int process ( jack_nframes_t nframes, void *arg )
 			}
 		}
 
-		// HERE: PLAY METRONOME
-		
+		// play metronome
+		if (is_metronome) {
+			// read song to determine whether there are some notes to play
+			notes_to_play = read_from_metronome (previous_time_position.bar, previous_time_position.tick, time_position.bar, time_position.tick, &lg);
 
+			// go through the notes that we shall play
+			for (i=0; i<lg; i++) {
+				// note was not played live; play it
+				buffer [0] = (notes_to_play [i].status) | (instr2chan (notes_to_play [i].instrument));
+				buffer [1] = notes_to_play [i].key;
+				buffer [2] = notes_to_play [i].vel;
+				// send midi command out to play note
+				push_to_list (OUT, buffer);
+			}
+		}
+
+		// ******HERE
 		// do the UI: cursor shall progress with the bar
+		// we shall adjust the bar number to map to a (page, bar) couple
+		// we will display cursor all the time, even if not required (still in same bar); this is to cope with cursor change of color (in case record is pressed)
 		ui_current_bar = previous_time_position.bar;
+		
+		// check led_ui_select fct; due to cursor color change
 		led_ui_select (ui_current_bar, ui_current_bar);
 
 		// copy current BBT position to previous BBT position

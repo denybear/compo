@@ -53,7 +53,7 @@ extern note_t song [SONG_SIZE];			// assume song will have less than 10000 notes
 extern int song_length;					// highest index in song []
 extern note_t copy_buffer [COPY_SIZE];	// copy-paste buffer
 extern int copy_length;					// highest index in copy_buffer []
-extern note_t metronome [8];			// metronome: 4 note-on, 4 note-off
+extern note_t metronome [16];			// metronome: 4 note-on, 4 note-off on 2 bars
 
 // status variables
 extern int is_play;						// play is in progress

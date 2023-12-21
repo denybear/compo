@@ -140,6 +140,30 @@ void write_to_song (note_t note) {
 // returns also the number of notes in the list (0 if no notes in the list) 
 note_t * read_from_song (u_int16_t b_limit1, u_int16_t t_limit1, u_int16_t b_limit2, u_int16_t t_limit2, int *length) {
 
+	return (read_from (song, song_length, b_limit1, t_limit1, b_limit2, t_limit2, length));
+}
+
+
+// read notes from metronome structure, which are located between bar, tick_limit1 (inclusive) and bar, tick_limit2 (exclusive)
+// returns a pointer to list of notes falling in this category, NULL if nothing
+// returns also the number of notes in the list (0 if no notes in the list) 
+note_t * read_from_metronome (u_int16_t b_limit1, u_int16_t t_limit1, u_int16_t b_limit2, u_int16_t t_limit2, int *length) {
+
+	// test that we don't want more than 1 bar of metronome
+	if (b_limit2 - b_limit1 > 1) {
+		*length = 0;
+		return NULL;
+	}
+
+	return (read_from (metronome, 16, 0, t_limit1, (b_limit2 - b_limit1), t_limit2, length));
+}
+
+
+// read notes from any song structure (main song or metronome), which are located between bar, tick_limit1 (inclusive) and bar, tick_limit2 (exclusive)
+// returns a pointer to list of notes falling in this category, NULL if nothing
+// returns also the number of notes in the list (0 if no notes in the list) 
+note_t * read_from (note_t* sg, int lg, u_int16_t b_limit1, u_int16_t t_limit1, u_int16_t b_limit2, u_int16_t t_limit2, int *length) {
+
 	int i;
 	int bar_limit1, bar_limit2;
 	int tick_limit1, tick_limit2;
@@ -149,26 +173,26 @@ note_t * read_from_song (u_int16_t b_limit1, u_int16_t t_limit1, u_int16_t b_lim
 	// check bar
 	////////////
 	// go through the song to locate the right bar; stop if we found the right bar or next bar
-	for (i=0; i<song_length; i++) {
-		if (song [i].bar >= b_limit1) {
+	for (i=0; i<lg; i++) {
+		if (sg [i].bar >= b_limit1) {
 			bar_limit1 = i;		// limit1 is either the first "same" bar, or first "higher" bar of beginning of song part to play 
 			break;
 		}
 	}
 	// test if we reached song boundary without success: in this case, limit1 is at the end of the song: leave
-	if (i==song_length) {
+	if (i==lg) {
 		*length = 0;
 		return NULL;
 	}
 
-	for (i=0; i<song_length; i++) {
-		if (song [i].bar > b_limit2) {
+	for (i=0; i<lg; i++) {
+		if (sg [i].bar > b_limit2) {
 			bar_limit2 = i;		// limit2 is the first "higher" bar of the end of the song part to play
 			break;
 		}
 	}
 	// test if we reached song boundary without success: in this case, limit2 is at the end of the song
-	if (i==song_length) bar_limit2 = i;
+	if (i==lg) bar_limit2 = i;
 
 	// test if bar_limit1 and bar_limit2 are the same; in which case there is nothing to read, and we can leave
 	if (bar_limit1 == bar_limit2) {
@@ -184,11 +208,11 @@ note_t * read_from_song (u_int16_t b_limit1, u_int16_t t_limit1, u_int16_t b_lim
 	// notes to play are between bar_limit1 and bar_limit2
 	// go through the song (between limit1 and limit 2) to locate the right tick to play
 	for (i=bar_limit1; i<bar_limit2; i++) {
-		if ((song [i].bar == b_limit1) && (song [i].tick >= t_limit1)) {
+		if ((sg [i].bar == b_limit1) && (sg [i].tick >= t_limit1)) {
 			tick_limit1 = i;		// limit1 is either the first "same" tick, or first "higher" tick in the bar of beginning of song part to play
 			break;
 		}
-		if (song [i].bar > b_limit1) {
+		if (sg [i].bar > b_limit1) {
 			tick_limit1 = i;		// limit1 is either the first "same" tick, or first "higher" tick in the bar of beginning of song part to play
 			break;
 		}
@@ -200,8 +224,8 @@ note_t * read_from_song (u_int16_t b_limit1, u_int16_t t_limit1, u_int16_t b_lim
 	}
 
 	for (i=bar_limit1; i<bar_limit2; i++) {
-		if ((song [i].bar == b_limit2) && (song [i].tick >= t_limit2)) {
-		// if you change condition with ((song [i].bar == b_limit2) && (song [i].tick > t_limit2)), then tick_limit2 is inclusive, not exclusive
+		if ((sg [i].bar == b_limit2) && (sg [i].tick >= t_limit2)) {
+		// if you change condition with ((sg [i].bar == b_limit2) && (sg [i].tick > t_limit2)), then tick_limit2 is inclusive, not exclusive
 			tick_limit2 = i;		// limit2 is the first "higher" tick of the bar of ending of song part to play
 			break;
 		}
@@ -221,7 +245,7 @@ note_t * read_from_song (u_int16_t b_limit1, u_int16_t t_limit1, u_int16_t b_lim
 	// the notes to be played sit between tick_limit1 (inclusive) and tick_limit2 (exclusive)
 	// return pointer and length of list of notes
 	*length = tick_limit2 - tick_limit1;
-	return (&song [tick_limit1]);
+	return (&sg [tick_limit1]);
 }
 
 
@@ -527,56 +551,59 @@ void create_metronome () {
 	
 	note_t note;
 	double half_time_ticks_per_beat;
+	int i;
 	
 	// time for triggering note-off
-	half_time_ticks_per_beat = time_ticks_per_beat / 2;
+	half_time_ticks_per_beat = time_ticks_per_beat / 4;
 	
-	// create 1 single bar only of metronome (this is enough)
-	// note 1 on
-	note.already_played = FALSE;
-	note.instrument = 0;			// instrument 0 is the drum
-	note.bar = 0;
-	note.beat = 0;
-	note.tick = (uint16_t) (0);
-	note.status = MIDI_NOTEON;
-	note.key = 76;					// high wood block
-	note.vel = 64;
-	memcpy (&metronome [0], &note, sizeof (note_t));
+	// create 2 bars only of metronome (this is enough)
+	for (i=0; i<2; i++) {
+	
+		// note 1 on
+		note.already_played = FALSE;
+		note.instrument = 0;			// instrument 0 is the drum
+		note.bar = i;
+		note.beat = 0;
+		note.tick = (uint16_t) (0);
+		note.status = MIDI_NOTEON;
+		note.key = 76;					// high wood block
+		note.vel = 64;
+		memcpy (&metronome [(i*8) + 0], &note, sizeof (note_t));
 
-	// note 1 off
-	note.tick = (uint16_t) (half_time_ticks_per_beat);
-	note.status = MIDI_NOTEOFF;
-	memcpy (&metronome [1], &note, sizeof (note_t));
+		// note 1 off
+		note.tick = (uint16_t) (half_time_ticks_per_beat);
+		note.status = MIDI_NOTEOFF;
+		memcpy (&metronome [(i*8) + 1], &note, sizeof (note_t));
 
-	// note 2 on
-	note.tick = (uint16_t) (time_ticks_per_beat);
-	note.status = MIDI_NOTEON;
-	note.key = 77;					// low wood block
-	memcpy (&metronome [2], &note, sizeof (note_t));
+		// note 2 on
+		note.tick = (uint16_t) (time_ticks_per_beat);
+		note.status = MIDI_NOTEON;
+		note.key = 77;					// low wood block
+		memcpy (&metronome [(i*8) + 2], &note, sizeof (note_t));
 
-	// note 2 off
-	note.tick = (uint16_t) (time_ticks_per_beat + half_time_ticks_per_beat);
-	note.status = MIDI_NOTEOFF;
-	memcpy (&metronome [3], &note, sizeof (note_t));
+		// note 2 off
+		note.tick = (uint16_t) (time_ticks_per_beat + half_time_ticks_per_beat);
+		note.status = MIDI_NOTEOFF;
+		memcpy (&metronome [(i*8) + 3], &note, sizeof (note_t));
 
-	// note 3 on
-	note.tick = (uint16_t) (2 * time_ticks_per_beat);
-	note.status = MIDI_NOTEON;
-	memcpy (&metronome [4], &note, sizeof (note_t));
+		// note 3 on
+		note.tick = (uint16_t) (2 * time_ticks_per_beat);
+		note.status = MIDI_NOTEON;
+		memcpy (&metronome [(i*8) + 4], &note, sizeof (note_t));
 
-	// note 3 off
-	note.tick = (uint16_t) ((2 * time_ticks_per_beat) + half_time_ticks_per_beat);
-	note.status = MIDI_NOTEOFF;
-	memcpy (&metronome [5], &note, sizeof (note_t));
+		// note 3 off
+		note.tick = (uint16_t) ((2 * time_ticks_per_beat) + half_time_ticks_per_beat);
+		note.status = MIDI_NOTEOFF;
+		memcpy (&metronome [(i*8) + 5], &note, sizeof (note_t));
 
-	// note 4 on
-	note.tick = (uint16_t) (3 * time_ticks_per_beat);
-	note.status = MIDI_NOTEON;
-	memcpy (&metronome [6], &note, sizeof (note_t));
+		// note 4 on
+		note.tick = (uint16_t) (3 * time_ticks_per_beat);
+		note.status = MIDI_NOTEON;
+		memcpy (&metronome [(i*8) + 6], &note, sizeof (note_t));
 
-	// note 4 off
-	note.tick = (uint16_t) ((3 * time_ticks_per_beat) + half_time_ticks_per_beat);
-	note.status = MIDI_NOTEOFF;
-	memcpy (&metronome [7], &note, sizeof (note_t));
-
+		// note 4 off
+		note.tick = (uint16_t) ((3 * time_ticks_per_beat) + half_time_ticks_per_beat);
+		note.status = MIDI_NOTEOFF;
+		memcpy (&metronome [(i*8) + 7], &note, sizeof (note_t));
+	}
 }

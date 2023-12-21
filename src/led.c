@@ -93,7 +93,7 @@ void led_ui_page (int page) {
 	push_to_list (UI, buffer);			// put in midisend buffer
 }
 
-// light selection between limit1 and limit2 and high green; erase previous selection; processing is done so that number of midi messages is optimized
+// light selection between limit1 and limit2 in high green/red; erase previous selection; processing is done so that number of midi messages is optimized
 // return first selected bar, which is always the min (lim1, lim2) 
 uint8_t led_ui_select (int lim1, int lim2) {
 
@@ -119,7 +119,7 @@ uint8_t led_ui_select (int lim1, int lim2) {
 		i++;
 	}
 
-	// display on the launchpad, by analyzing current selection to be dispay vs. previous selection buffer to be displayed
+	// display on the launchpad, by analyzing current selection to be displayed vs. previous selection buffer to be displayed
 	// go from pad to pad
 	for (i=0; i<64; i++) {
 		if ((ui_select_previous [i] != BLACK) && (ui_select [i] == BLACK)) {
