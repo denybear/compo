@@ -24,7 +24,7 @@ int process ( jack_nframes_t nframes, void *arg )
 	int dest, row, col, on_off;				// variables used to manage lighting of the pad leds
 	char ch;								// used to read keys from UI keyboard (not music MIDI keyboard)
 	note_t *notes_to_play;
-	int lg;
+	int lg, bar, page;						// temp variables
 
 
 
@@ -43,7 +43,7 @@ int process ( jack_nframes_t nframes, void *arg )
 		for (i=0; i<lg; i++) {
 			if (notes_to_play [i].already_played == TRUE) {
 				// note was already played "live", no need to replay it this time; but shall be replayed next time
-				notes_to_play [i].already_played == FALSE;
+				notes_to_play [i].already_played = FALSE;
 			}
 			else {
 				// note was not played live; play it
@@ -71,14 +71,39 @@ int process ( jack_nframes_t nframes, void *arg )
 			}
 		}
 
-		// ******HERE
 		// do the UI: cursor shall progress with the bar
 		// we shall adjust the bar number to map to a (page, bar) couple
-		// we will display cursor all the time, even if not required (still in same bar); this is to cope with cursor change of color (in case record is pressed)
-		ui_current_bar = previous_time_position.bar;
-		
-		// check led_ui_select fct; due to cursor color change
-		led_ui_select (ui_current_bar, ui_current_bar);
+		// we will display cursor only if required, ie. change of bar
+		if (previous_time_position.bar != time_position.bar) {
+			// change of bar, we move the cursor along to the new bar
+			// note that we change UI based on new time_position, while we are still processing
+			// events that occured between previous_time_position and time_position.
+			// This is to simplify code
+			page = (int) (time_position.bar / 64);
+			bar = time_position.bar % 64;
+
+			// check whether we are on the same page, or we need to move to a new page
+			if (page != ui_current_page) {
+				// display new page
+
+				// unlight previous pad 
+				ui_pages [ui_current_page] = LO_GREEN;
+				led_ui_page (ui_current_page);
+				
+				// light new pad
+				ui_current_page = page;		// ui_current_page is set to new pad
+				ui_pages [ui_current_page] = HI_GREEN;
+				led_ui_page (ui_current_page);
+
+				// display a full new page of bars for this instrument
+				led_ui_bars (ui_current_instrument, ui_current_page);
+			}
+
+			// display cursor on bar
+			led_ui_select (bar, bar);
+		}
+		ui_current_bar = time_position.bar % 64;		// set ui current bar value between (0-63)
+//		ui_current_bar = previous_time_position.bar % 64;		// set ui current bar value between (0-63)
 
 		// copy current BBT position to previous BBT position
 		memcpy (&previous_time_position, &time_position, sizeof (jack_position_t));
@@ -182,16 +207,19 @@ int process ( jack_nframes_t nframes, void *arg )
 		case 'p':	// PLAY
 			// status variable
 			is_play = is_play ? FALSE : TRUE;
-printf ("play:%d\n", is_play);
 			// reset BBT position
 			compute_bbt (nframes, &time_position, TRUE);
 			// copy BBT to previous position as well
 			memcpy (&previous_time_position, &time_position, sizeof (jack_position_t));
 			break;
 		case 'r':	// RECORD
-			// status variable
-			is_record = is_record ? FALSE : TRUE;
-printf ("record:%d\n", is_record);
+			// make sure no selection is in progress to enable record
+			// WE SHOULD DO BETTER THAN THIS
+			if ((!ui_limit1_pressed) && (!ui_limit2_pressed)) {
+				// status variable
+				is_record = is_record ? FALSE : TRUE;
+				led_ui_select (ui_current_bar, ui_current_bar);
+			}
 			break;
 		case 't':	// TAP TEMPO
 			if (tap1 == 0) {
@@ -207,6 +235,7 @@ printf ("record:%d\n", is_record);
 				// 1 beat = X samples --> X / (48000 * 60) min
 				// 1 min --> ((48000 * 60) / X) beats = BPM 
 				time_beats_per_minute = (int) ((jack_get_sample_rate (client) * 60.0) / (tap2 - tap1));
+				time_position.beats_per_minute = time_beats_per_minute;
 				// prepare for next call
 				tap1 = tap2;
 			}

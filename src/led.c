@@ -126,11 +126,11 @@ uint8_t led_ui_select (int lim1, int lim2) {
 			// this pad was lit, but should now be unlit
 			led_ui_bar (ui_current_instrument, ui_current_page, i);
 		}
-		if ((ui_select_previous [i] == BLACK) && (ui_select [i] == color_ui_cursor () )) {
+		if ((ui_select_previous [i] == BLACK) && (ui_select [i] != BLACK)) {
 			// light pad in case it was not lit previously
 			led_ui_bar (ui_current_instrument, ui_current_page, i);
 		}
-		// in case pad was hi green previously, we do nothing (no midi msg sent) as an optimisation
+		// in case pad was hi green or red previously, we do nothing (no midi msg sent) as an optimisation
 	}
 
 	// copy current select buffer into previous buffer: current becomes previous

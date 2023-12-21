@@ -161,7 +161,7 @@ int midi_write (void *port_buffer, jack_nframes_t time, jack_midi_data_t *buffer
 void compute_bbt (jack_nframes_t nframes, jack_position_t *pos, int new_pos)
 {
 	double ticks_per_bar;		// number of ticks per bar
-	double temp;
+	uint32_t start_bar;
 
 	if (new_pos) {
 
@@ -172,15 +172,16 @@ void compute_bbt (jack_nframes_t nframes, jack_position_t *pos, int new_pos)
 		pos->ticks_per_beat = time_ticks_per_beat;
 		pos->beats_per_minute = time_beats_per_minute;
 
-		// set BBT to (ui_current_bar),1,1; this is in the case of "play"
-		pos->bar = ui_current_bar;
+		// set BBT to bar,0,0; this is in the case of "play"
+		pos->bar = (ui_current_page * 64) + ui_current_bar;
+		pos->padding[0] = pos->bar;		// save starting bar in padding 
 		pos->beat = 0;
 		pos->tick = 0;
 		pos->bar_start_tick = 0.0;
 	}
 	else {
 
-		/* Compute BBT info based on previous period. */
+		// Compute BBT info based on previous period.
 		// (1) pos->ticks_per_beat * pos->beats_per_minute : number of ticks per minutes
 		// (2) (pos->frame_rate * 60) / nframes : number of frames per minute
 		// (1)/(2) = number of ticks per frame; (1)/(2) is equal to (1) * inv(2) 
@@ -190,9 +191,9 @@ void compute_bbt (jack_nframes_t nframes, jack_position_t *pos, int new_pos)
 		ticks_per_bar = pos->beats_per_bar * pos->ticks_per_beat;
 		pos->tick = (int) pos->bar_start_tick % (int) ticks_per_bar;	// tick number within the bar
 		pos->beat = pos->tick / (int) time_ticks_per_beat;				// beat number within the bar
-		pos->bar = ui_current_bar + ((int) pos->bar_start_tick / (int) ticks_per_bar);		// bar number
+		pos->bar = pos->padding [0] + ((int) pos->bar_start_tick / (int) ticks_per_bar);		// bar number
 		// check bar boundaries; go to bar 0 if we reach last bar
-		if (pos->bar > 512) pos->bar = pos->bar % 512;		// 512 = 64 bar * 8 pages; we loop after 512 bars
+		if (pos->bar >= 512) pos->bar = pos->bar % 512;		// 512 = 64 bar * 8 pages; we loop after 512 bars
 	}
 }
 

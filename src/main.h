@@ -17,7 +17,7 @@ float time_beat_type = 4.0;
 double time_ticks_per_beat = 480.0;
 double time_beats_per_minute = 120.0;
 jack_position_t time_position;				// structure that contains BBT for the playing / recording 
-jack_position_t previous_time_position;		// structure that contains BBT for the playing / recording 
+jack_position_t previous_time_position;		// structure that contains BBT for the playing / recording
 
 // define midi ports
 jack_port_t *midi_UI_in, *midi_UI_out;
@@ -33,7 +33,7 @@ uint8_t ui_pages [8];			// state of ui for pages pads
 uint8_t ui_bars [8][8][64];		// state of ui for bar: 64 bar per page, 8 pages, 8 instruments
 int ui_current_instrument;		// instrument currently selected
 int ui_current_page;			// page currently selected
-int ui_current_bar;				// bar currently selected
+int ui_current_bar;				// bar currently selected (between 0 and 63)
 
 // define the structures for managing midi out (ie. lists)
 uint8_t ui_list [LIST_ELT] [3];		// midi out buffer for UI

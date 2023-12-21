@@ -149,6 +149,12 @@ note_t * read_from_song (u_int16_t b_limit1, u_int16_t t_limit1, u_int16_t b_lim
 // returns also the number of notes in the list (0 if no notes in the list) 
 note_t * read_from_metronome (u_int16_t b_limit1, u_int16_t t_limit1, u_int16_t b_limit2, u_int16_t t_limit2, int *length) {
 
+	// test that we have not reached song boundaries, otherwise loop
+	if ((b_limit1 == 511) && (b_limit2 == 0)) {
+		b_limit1 = 0;
+		b_limit2 = 1;
+	}
+	
 	// test that we don't want more than 1 bar of metronome
 	if (b_limit2 - b_limit1 > 1) {
 		*length = 0;
