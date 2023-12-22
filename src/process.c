@@ -25,6 +25,7 @@ int process ( jack_nframes_t nframes, void *arg )
 	char ch;								// used to read keys from UI keyboard (not music MIDI keyboard)
 	note_t *notes_to_play;
 	int lg, bar, page;						// temp variables
+	double bpm;								// temp variable for tap tempo
 
 
 
@@ -102,7 +103,7 @@ int process ( jack_nframes_t nframes, void *arg )
 			// display cursor on bar
 			led_ui_select (bar, bar);
 		}
-		ui_current_bar = time_position.bar % 64;		// set ui current bar value between (0-63)
+		ui_current_bar = time_position.bar % 64;				// set ui current bar value between (0-63)
 //		ui_current_bar = previous_time_position.bar % 64;		// set ui current bar value between (0-63)
 
 		// copy current BBT position to previous BBT position
@@ -214,12 +215,11 @@ int process ( jack_nframes_t nframes, void *arg )
 			break;
 		case 'r':	// RECORD
 			// make sure no selection is in progress to enable record
-			// WE SHOULD DO BETTER THAN THIS
-			if ((!ui_limit1_pressed) && (!ui_limit2_pressed)) {
-				// status variable
-				is_record = is_record ? FALSE : TRUE;
-				led_ui_select (ui_current_bar, ui_current_bar);
-			}
+			// status variable
+			is_record = is_record ? FALSE : TRUE;
+			// if play in progress, red-ify current bar otherwise red-ify current selection
+			if (is_play) led_ui_select (ui_current_bar, ui_current_bar);
+			else led_ui_select (ui_limit1, ui_limit2);
 			break;
 		case 't':	// TAP TEMPO
 			if (tap1 == 0) {
@@ -234,10 +234,20 @@ int process ( jack_nframes_t nframes, void *arg )
 				// 48000 * 60 samples --> 1 min
 				// 1 beat = X samples --> X / (48000 * 60) min
 				// 1 min --> ((48000 * 60) / X) beats = BPM 
-				time_beats_per_minute = (int) ((jack_get_sample_rate (client) * 60.0) / (tap2 - tap1));
-				time_position.beats_per_minute = time_beats_per_minute;
-				// prepare for next call
-				tap1 = tap2;
+				bpm = (int) ((jack_get_sample_rate (client) * 60.0) / (tap2 - tap1));
+
+				// check that BPM is above a certain value to allow tempo change
+				if (bpm >= 40) {
+					time_beats_per_minute = bpm;
+					time_position.beats_per_minute = time_beats_per_minute;
+					// prepare for next call
+					tap1 = tap2;
+				}
+				else {
+					// if tempo is too low, consider this is a first press
+					tap1 = jack_last_frame_time(client);
+					tap2 = 0;
+				}
 			}
 			break;
 		case 'm':	// METRONOME ON/OFF
@@ -270,11 +280,13 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 	// in case recording is on
 	if (is_record && is_play) {
 		// fill-in note structure
-		note.already_played = TRUE;
 		note.instrument = ui_current_instrument;
 		note.bar = time_position.bar;
 		note.beat = time_position.beat;
 		note.tick = quantize (time_position.tick, quantizer);
+		// if note is to be played in the future, indicate we have played it already
+		if (note.tick >= time_position.tick) note.already_played = TRUE;
+		else note.already_played = FALSE;
 		// check whether tick is on next bar or not
 		if (note.tick == 0xFFFFFFFF) {
 			// check boundaries of bar
@@ -282,12 +294,18 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 			else note.bar = 0;
 			note.beat = 0;
 			note.tick = 0;
+			note.already_played = TRUE;
 		}
 		note.status = buffer [0] & 0xF0;		// midi command only, no midi channel (it is set at play time)
 		note.key = buffer [1];
 		note.vel = buffer [2];
 		// add quantized note to song
 		write_to_song (note);
+
+		// we have recorded something in the bar : set bar to a color
+		if (ui_bars [ui_current_instrument][note.bar / 64][note.bar % 64] == BLACK) {
+			ui_bars [ui_current_instrument][note.bar / 64][note.bar % 64] = LO_YELLOW;
+		}
 
 		// we don't do any UI yet as UI is done in the "play" section
 	}

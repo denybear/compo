@@ -94,7 +94,7 @@ void led_ui_page (int page) {
 }
 
 // light selection between limit1 and limit2 in high green/red; erase previous selection; processing is done so that number of midi messages is optimized
-// return first selected bar, which is always the min (lim1, lim2) 
+// return first selected bar, which is always the min (lim1, lim2)
 uint8_t led_ui_select (int lim1, int lim2) {
 
 	uint8_t buffer [4], color;
@@ -125,12 +125,18 @@ uint8_t led_ui_select (int lim1, int lim2) {
 		if ((ui_select_previous [i] != BLACK) && (ui_select [i] == BLACK)) {
 			// this pad was lit, but should now be unlit
 			led_ui_bar (ui_current_instrument, ui_current_page, i);
+			continue;
 		}
 		if ((ui_select_previous [i] == BLACK) && (ui_select [i] != BLACK)) {
 			// light pad in case it was not lit previously
 			led_ui_bar (ui_current_instrument, ui_current_page, i);
+			continue;
 		}
-		// in case pad was hi green or red previously, we do nothing (no midi msg sent) as an optimisation
+		if (ui_select_previous [i] != ui_select [i]) {
+			// pads are both lit, but not the same color
+			led_ui_bar (ui_current_instrument, ui_current_page, i);
+			continue;
+		}
 	}
 
 	// copy current select buffer into previous buffer: current becomes previous

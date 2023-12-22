@@ -65,7 +65,7 @@ static void init_globals ( )
 	keypad (stdscr, TRUE);	// special keys can be captured
 
 	// init quantization engine
-	quantizer = THIRTY_SECOND;
+	quantizer = SIXTEENTH;
 	create_quantization_tables ();		// create all the tables used for quantization
 
 	// create metronome table
