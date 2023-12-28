@@ -20,6 +20,18 @@ int color_ui_cursor () {
 }
 
 
+// for a colored bar, returns the next color (if color were pressed)
+int color_ui_bar (int col) {
+
+	if (col == BLACK) return BLACK;
+	if (col == LO_RED) return LO_AMBER;
+	if (col == LO_AMBER) return LO_GREEN;
+	if (col == LO_GREEN) return LO_ORANGE;
+	if (col == LO_ORANGE) return LO_YELLOW;
+	if (col == LO_YELLOW) return LO_RED;
+}
+
+
 // light the "instruments" row of leds
 void led_ui_instruments () {
 	int i;

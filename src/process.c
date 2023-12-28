@@ -24,7 +24,7 @@ int process ( jack_nframes_t nframes, void *arg )
 	int dest, row, col, on_off;				// variables used to manage lighting of the pad leds
 	char ch;								// used to read keys from UI keyboard (not music MIDI keyboard)
 	note_t *notes_to_play;
-	int lg, bar, page;						// temp variables
+	int lg, bar, page, blimit1, blimit2;	// temp variables
 	double bpm;								// temp variable for tap tempo
 
 
@@ -240,6 +240,7 @@ int process ( jack_nframes_t nframes, void *arg )
 				if (bpm >= 40) {
 					time_beats_per_minute = bpm;
 					time_position.beats_per_minute = time_beats_per_minute;
+					time_bpm_multiplier = 1.0;		// reset bpm multiplier to initial value
 					// prepare for next call
 					tap1 = tap2;
 				}
@@ -250,8 +251,102 @@ int process ( jack_nframes_t nframes, void *arg )
 				}
 			}
 			break;
+		case 'y':	// TEMPO -
+			if (time_bpm_multiplier <= 0.1) break;		// if low boundary reached, do nothing
+			time_bpm_multiplier -= 0.1;
+			time_position.beats_per_minute = (int) (time_beats_per_minute * time_bpm_multiplier);
+			break;
+		case 'u':	// TEMPO +
+			if (time_bpm_multiplier >= 3.0) break;		// if high boundary reached, do nothing
+			time_bpm_multiplier += 0.1;
+			time_position.beats_per_minute = (int) (time_beats_per_minute * time_bpm_multiplier);
+			break;
 		case 'm':	// METRONOME ON/OFF
 			is_metronome = is_metronome ? FALSE : TRUE;
+			break;
+		case 'c':	// COPY
+			// if play in process, do nothing
+			if (is_play) break;
+			// if keypresses in progress, do nothing
+			if ((ui_limit1_pressed) || (ui_limit2_pressed)) break;
+			
+			blimit1 = ui_limit1 + (ui_current_page * 64);		// determine start bar number from page num
+			blimit2 = ui_limit2 + (ui_current_page * 64);		// determine end bar number from page num
+			copy (blimit1, blimit2, ui_current_instrument);		// copy and put in copy buffer
+			// copy color of bars to specific buffer
+			j = 0;
+			for (i = ui_limit1; i < ui_limit2; i++) {
+				led_copy_buffer [j++] = ui_bars [ui_current_instrument][ui_current_page][i];
+			}
+			led_copy_length = j;
+			// display new bars on the UI; redisplay the whole page, it is easier
+			led_ui_bars (ui_current_instrument, ui_current_page);
+			// display cursor on bar
+			led_ui_select (ui_current_bar, ui_current_bar);
+			break;
+		case 'x':	// CUT
+			// if play in process, do nothing
+			if (is_play) break;
+			// if keypresses in progress, do nothing
+			if ((ui_limit1_pressed) || (ui_limit2_pressed)) break;
+			
+			blimit1 = ui_limit1 + (ui_current_page * 64);		// determine start bar number from page num
+			blimit2 = ui_limit2 + (ui_current_page * 64);		// determine end bar number from page num
+			cut (blimit1, blimit2, ui_current_instrument);		// cut and put in copy buffer
+			// copy color of bars to specific buffer and clear bars that have been cut in the UI
+			j = 0;
+			for (i = ui_limit1; i < ui_limit2; i++) {
+				led_copy_buffer [j++] = ui_bars [ui_current_instrument][ui_current_page][i];
+				ui_bars [ui_current_instrument][ui_current_page][i] = BLACK;
+			}
+			led_copy_length = j;
+			// display new bars on the UI; redisplay the whole page, it is easier
+			led_ui_bars (ui_current_instrument, ui_current_page);
+			// display cursor on bar
+			led_ui_select (ui_current_bar, ui_current_bar);
+			break;
+		case 'v':	// PASTE
+			// if play in process, do nothing
+			if (is_play) break;
+			// if keypresses in progress, do nothing
+			if ((ui_limit1_pressed) || (ui_limit2_pressed)) break;
+			// if copy buffer is empty, do nothing
+			if (copy_length == 0) break;
+			
+			blimit1 = ui_current_bar + (ui_current_page * 64);	// determine start bar number from page num
+			paste (blimit1, ui_current_instrument);				// paste from copy buffer
+			// copy color of bars to match what has been copied
+			for (i = 0; i < led_copy_length; i++) {
+				// check whether we are in the same page or we should change page
+				// according to memory structure, it should not be necessary; but you never know
+				if ((ui_current_bar + i) < 64) {
+					ui_bars [ui_current_instrument][ui_current_page][ui_current_bar + i] = led_copy_buffer [i];
+				}
+				else {
+					// copy if page number is within boundaries
+					if (ui_current_page < 7) ui_bars  [ui_current_instrument][ui_current_page + 1][(ui_current_bar + i) % 64] = led_copy_buffer [i];
+				}
+			}
+			// display new bars on the UI; redisplay the whole page, it is easier
+			led_ui_bars (ui_current_instrument, ui_current_page);
+			// display cursor on bar
+			led_ui_select (ui_current_bar, ui_current_bar);
+			break;
+		case 'o':	// COLOR
+			// if play in process, do nothing
+			if (is_play) break;
+			// if keypresses in progress, do nothing
+			if ((ui_limit1_pressed) || (ui_limit2_pressed)) break;
+			
+			// change color of bars to their next color
+			for (i = ui_limit1; i < ui_limit2; i++) {
+				ui_bars [ui_current_instrument][ui_current_page][i] = color_ui_bar (ui_bars [ui_current_instrument][ui_current_page][i]);
+			}
+			// display new bars on the UI; redisplay the whole page, it is easier
+			led_ui_bars (ui_current_instrument, ui_current_page);
+			// display cursor on bar
+			led_ui_select (ui_current_bar, ui_current_bar);
+			break;
 		default:
 			break;
 	}

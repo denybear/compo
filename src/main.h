@@ -16,6 +16,7 @@ float time_beats_per_bar = 4.0;
 float time_beat_type = 4.0;
 double time_ticks_per_beat = 480.0;
 double time_beats_per_minute = 120.0;
+float time_bpm_multiplier = 1.0;
 jack_position_t time_position;				// structure that contains BBT for the playing / recording 
 jack_position_t previous_time_position;		// structure that contains BBT for the playing / recording
 
@@ -56,6 +57,8 @@ note_t song [SONG_SIZE];			// assume song will have less than 10000 notes in it
 int song_length;					// highest index in song []
 note_t copy_buffer [COPY_SIZE];		// copy-paste buffer
 int copy_length;					// highest index in copy_buffer []
+uint8_t led_copy_buffer [64];		// 64 bytes to store led status of bars of copy buffer
+int led_copy_length;				// highest index in led_copy_buffer []
 note_t metronome [16];				// metronome: 4 note-on, 4 note-off on 2 bars
 
 // status variables

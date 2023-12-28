@@ -71,16 +71,17 @@
 #define DEL			2
 
 /* types */
-// each note consists in this structure : 66 bytes - TBD whether it needs to be optimized
+// each note consists in this structure : 16 bytes - TBD whether it needs to be optimized
 typedef struct {
+	uint16_t bar;
+	uint16_t tick;
+	uint8_t beat;
 	uint8_t	already_played;
 	uint8_t instrument;
-	uint16_t bar;
-	uint8_t beat;
-	uint16_t tick;
-	uint8_t status;		// MIDI cmd only, not the channel
+	uint8_t status;			// MIDI cmd only, not the channel
 	uint8_t key;
 	uint8_t vel;
+	uint8_t padding [6];	// goal is to make 16 bytes, ie. 2 x 64 bits
 } note_t;
 
 

@@ -13,6 +13,7 @@ extern float time_beats_per_bar;
 extern float time_beat_type;
 extern double time_ticks_per_beat;
 extern double time_beats_per_minute;
+extern float time_bpm_multiplier;
 extern jack_position_t time_position;			// structure that contains BBT for the playing / recording 
 extern jack_position_t previous_time_position;	// structure that contains BBT for the playing / recording 
 
@@ -53,6 +54,8 @@ extern note_t song [SONG_SIZE];			// assume song will have less than 10000 notes
 extern int song_length;					// highest index in song []
 extern note_t copy_buffer [COPY_SIZE];	// copy-paste buffer
 extern int copy_length;					// highest index in copy_buffer []
+extern uint8_t led_copy_buffer [64];	// 64 bytes to store led status of bars of copy buffer
+extern int led_copy_length;				// highest index in led_copy_buffer []
 extern note_t metronome [16];			// metronome: 4 note-on, 4 note-off on 2 bars
 
 // status variables

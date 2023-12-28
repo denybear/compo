@@ -33,8 +33,11 @@ static void init_globals ( )
 	memset (out_list, 0, LIST_ELT * 3);
 	// empty song structure
 	memset (song, 0, SONG_SIZE * sizeof (note_t));
-	// empty copy_buffer structure
+	// empty copy_buffer structure and corresponding led structure
 	memset (copy_buffer, 0, COPY_SIZE * sizeof (note_t));
+	copy_length = 0;
+	memset (led_copy_buffer, BLACK, 64);
+	led_copy_length = 0;
 	// fill UI structures with start values to set up leds
 	memset (ui_instruments, LO_GREEN, 8);
 	memset (ui_pages, LO_GREEN, 8);
