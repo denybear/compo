@@ -74,6 +74,10 @@
 #define REMOVE		5
 #define COLOR		6
 
+/* transpo values */
+#define PLUS	1
+#define MINUS 	0
+
 /* types */
 // each note consists in this structure : 16 bytes - TBD whether it needs to be optimized
 typedef struct {

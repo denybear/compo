@@ -282,6 +282,12 @@ int process ( jack_nframes_t nframes, void *arg )
 		case 'o':	// COLOR
 			bar_process (COLOR);
 			break;
+		case 'd':	// TRANSPO -
+			transpo_process (ui_current_instrument, MINUS);
+			break;
+		case 'f':	// TRANSPO +
+			transpo_process (ui_current_instrument ,PLUS);
+			break;
 		default:
 			break;
 	}
@@ -487,7 +493,7 @@ int ui_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 void bar_process (int mode) {
 
 	int i, j;
-	int page, bar, blimit1, blimit2;		// temp variables
+	int page, bar, blimit1, blimit2, limit1, limit2;		// temp variables
 
 		// if play in process, do nothing
 		if (is_play) return;
@@ -564,11 +570,22 @@ void bar_process (int mode) {
 */
 				break;
 			case INSERT:
-				// first we cut all the bars of song from cursor position onwards
-				cut (blimit1, 512, ui_current_instrument);			// cut and put in copy buffer
-				// copy color of bars to specific buffer and clear bars that have been cut in the UI
+			case REMOVE:
+				// insert or remove X bars at the given position
+				if (mode == INSERT) {		// INSERT bars
+					limit1 = blimit1;
+					limit2 = blimit2;
+				}
+				else {						// REMOVE bars
+					limit1 = blimit2;
+					limit2 = blimit1;
+				}
+
+				// first we cut all the bars of song from limit (beg or end of selection) position onwards
+				cut (limit1, 512, ui_current_instrument);			// cut and put in copy buffer
+				// copy color of bars to specific buffer and clear bars until end of the song
 				j = 0;
-				for (i = blimit1; i < 512; i++) {
+				for (i = limit1; i < 512; i++) {
 					page = i / 64;									// compute page number
 					bar = i % 64;									// compute bar number
 					led_copy_buffer [j++] = ui_bars [ui_current_instrument][page][bar];
@@ -577,16 +594,14 @@ void bar_process (int mode) {
 				led_copy_length = j;
 
 				// then we paste from new position onwards
-				paste (blimit2, ui_current_instrument);				// paste from copy buffer
+				paste (limit2, ui_current_instrument);				// paste from copy buffer
 				// copy color of bars to match what has been copied
 				for (i = 0; i < led_copy_length; i++) {
-					page = (i + blimit2) / 64;									// compute page number
-					bar = (i + blimit2) % 64;									// compute bar number
-					// check we are not out of boundaries
+					page = (i + limit2) / 64;						// compute page number
+					bar = (i + limit2) % 64;						// compute bar number
+					// check we are not out of boundaries (in case of insert; no issue with remove)
 					if (page < 8) ui_bars [ui_current_instrument][page][bar] = led_copy_buffer [i];
 				}
-				break;
-			case REMOVE:
 				break;
 			case COLOR:
 				// change color of bars to their next color
@@ -603,4 +618,26 @@ void bar_process (int mode) {
 		// display cursor on bar
 		// at this point, ui_current_bar should ALWAYS be set to selection limit1 (left limit) 
 		led_ui_select (ui_current_bar, ui_current_bar);
+}
+
+
+void transpo_process (int instr, int mode) {
+
+	int i;
+
+	// read through all the song
+	for (i = 0; i < song_length; i++){
+		// check if note has the right instrument
+		if (song [i].instrument == instr) {
+			if (mode == PLUS) {
+				// Plus 1/2 tone (check boundaries)
+				if (song [i].key < 0x7F) song [i].key++;
+			}
+			else {
+				// Minus 1/2 tone (check boundaries)
+				if (song [i].key > 0x00) song [i].key--;
+			}
+		}
+	}
+	return;
 }
