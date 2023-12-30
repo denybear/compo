@@ -36,7 +36,7 @@ static void init_globals ( )
 	// empty copy_buffer structure and corresponding led structure
 	memset (copy_buffer, 0, COPY_SIZE * sizeof (note_t));
 	copy_length = 0;
-	memset (led_copy_buffer, BLACK, 64);
+	memset (led_copy_buffer, BLACK, 512);
 	led_copy_length = 0;
 	// fill UI structures with start values to set up leds
 	memset (ui_instruments, LO_GREEN, 8);

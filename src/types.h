@@ -69,6 +69,10 @@
 #define COPY		0
 #define	CUT			1
 #define DEL			2
+#define PASTE		3
+#define INSERT		4
+#define REMOVE		5
+#define COLOR		6
 
 /* types */
 // each note consists in this structure : 16 bytes - TBD whether it needs to be optimized

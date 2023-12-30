@@ -7,5 +7,4 @@
 int process ( jack_nframes_t, void *);
 int kbd_midi_in_process (jack_midi_event_t *, jack_nframes_t);
 int ui_midi_in_process (jack_midi_event_t *, jack_nframes_t);
-void timebbt (jack_transport_state_t, jack_nframes_t, jack_position_t *, int, void *);
-
+void bar_process (int);
