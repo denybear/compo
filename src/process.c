@@ -51,8 +51,8 @@ int process ( jack_nframes_t nframes, void *arg )
 				buffer [0] = (notes_to_play [i].status) | (instr2chan (notes_to_play [i].instrument));
 				buffer [1] = notes_to_play [i].key;
 				buffer [2] = notes_to_play [i].vel;
-				// play note only if note should be played (mute, solo, etc)
-				if (should_play (notes_to_play [i].instrument)) push_to_list (OUT, buffer); 	// send midi command out to play note
+				// play note only if note should be played (mute, solo, etc) or not note on
+				if (should_play (notes_to_play [i].instrument) || ((buffer [0] & 0xF0) != MIDI_NOTEON)) push_to_list (OUT, buffer);	// put in midisend buffer to play the note straight !
 			}
 		}
 
@@ -104,6 +104,8 @@ int process ( jack_nframes_t nframes, void *arg )
 			led_ui_select (bar, bar);
 		}
 		ui_current_bar = time_position.bar % 64;				// set ui current bar value between (0-63)
+		ui_limit1 = ui_current_bar;								// set selection as well (we are not in selection mode)
+		ui_limit2 = ui_current_bar;
 //		ui_current_bar = previous_time_position.bar % 64;		// set ui current bar value between (0-63)
 
 		// copy current BBT position to previous BBT position
@@ -203,12 +205,12 @@ int process ( jack_nframes_t nframes, void *arg )
 	/**************************************/
 
 	ch = getch();
-//if (ch !=0xFF) printf ("char: %02X\n", ch);
 	switch (ch) {
 		case NUM_ENTER:	// PLAY
 		case SNUM_ENTER:
 			// status variable
 			is_play = is_play ? FALSE : TRUE;
+// send all notes off
 			// reset BBT position
 			compute_bbt (nframes, &time_position, TRUE);
 			// copy BBT to previous position as well
@@ -284,12 +286,6 @@ int process ( jack_nframes_t nframes, void *arg )
 			break;
 		case NUM_000:	// COLOR
 		// case SNUM_000:
-			// empty numpad buffer, as "000" on numpad returns C3A0C3A0C3A0
-//			getch();	// 0xA0
-//			getch();	// 0xC3
-//			getch();	// 0xA0
-//			getch();	// 0xC3
-//			getch();	// 0xA0
 			bar_process (COLOR);
 			break;
 		case NUM_7:	// INSERT BARS
@@ -340,8 +336,8 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 	// play the music straight
 	// get midi channel from instrument number, and assign it to midi command
 	buffer [0] = (buffer [0] & 0xF0) | (instr2chan (ui_current_instrument));
-	// play note only if note should be played (mute, solo, etc)
-	if (should_play (ui_current_instrument)) push_to_list (OUT, buffer);	// put in midisend buffer to play the note straight !
+	// play note only if note should be played (mute, solo, etc) or not note on
+	if (should_play (ui_current_instrument) || ((buffer [0] & 0xF0) != MIDI_NOTEON)) push_to_list (OUT, buffer);	// put in midisend buffer to play the note straight !
 
 
 	// in case recording is on
@@ -350,7 +346,9 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 		note.instrument = ui_current_instrument;
 		note.bar = time_position.bar;
 		note.beat = time_position.beat;
+quantizer = QUARTER;
 		note.tick = quantize (time_position.tick, quantizer);
+printf ("note:%02x time:%d quant:%d\n", (buffer[0] & 0xF0), time_position.tick, note.tick);
 		// if note is to be played in the future, indicate we have played it already
 		if (note.tick >= time_position.tick) note.already_played = TRUE;
 		else note.already_played = FALSE;
@@ -412,7 +410,7 @@ int ui_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 					break;
 				case HI_RED:
 					// the pad was selected before but was solo; next move is put to hi yellow (active)
-					ui_instruments [key] = HI_GREEN;
+					ui_instruments [key] = HI_YELLOW;
 					break;
 				case HI_YELLOW:
 					// the pad was selected before (choice of instr); next move is put to hi amber (active)

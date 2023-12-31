@@ -170,7 +170,7 @@ void compute_bbt (jack_nframes_t nframes, jack_position_t *pos, int new_pos)
 		pos->beats_per_bar = time_beats_per_bar;
 		pos->beat_type = time_beat_type;
 		pos->ticks_per_beat = time_ticks_per_beat;
-		pos->beats_per_minute = time_beats_per_minute;
+		pos->beats_per_minute = (int) (time_beats_per_minute * time_bpm_multiplier);
 
 		// set BBT to bar,0,0; this is in the case of "play"
 		pos->bar = (ui_current_page * 64) + ui_current_bar;
