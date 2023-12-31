@@ -24,6 +24,7 @@
 /* constants */
 // colors used by Novation Launchpad mini
 #define BLACK		0x0C
+#define LO_BLACK	0xFF	// dummy value processed as black for the UI
 #define LO_RED		0x0D
 #define HI_RED		0x0F
 #define LO_AMBER	0x1D
@@ -77,6 +78,45 @@
 /* transpo values */
 #define PLUS	1
 #define MINUS 	0
+
+/* num pad */
+#define NUM_0		0x4B
+#define NUM_000		0xC3
+#define NUM_DOT		0x4A
+#define NUM_1		0x68
+#define NUM_2		0x02
+#define NUM_3		0x52
+#define	NUM_ENTER	0x57
+#define NUM_4		0x04
+#define NUM_5		0x3E
+#define NUM_6		0x05
+#define	NUM_BACK	0x07
+#define NUM_7		0x06
+#define NUM_8		0x03
+#define NUM_9		0x53
+#define	NUM_PLUS	0x3F
+#define NUM_SLASH	0x41
+#define NUM_STAR	0x43
+#define NUM_MINUS	0x44
+/* num pad + numlock (shift) */
+#define SNUM_0		0x30
+#define SNUM_000	0xC3
+#define SNUM_DOT	0x2E
+#define SNUM_1		0x31
+#define SNUM_2		0x32
+#define SNUM_3		0x33
+#define	SNUM_ENTER	0x0A
+#define SNUM_4		0x34
+#define SNUM_5		0x35
+#define SNUM_6		0x36
+#define	SNUM_BACK	0x07
+#define SNUM_7		0x37
+#define SNUM_8		0x38
+#define SNUM_9		0x39
+#define	SNUM_PLUS	0x2B
+#define SNUM_SLASH	0x2F
+#define SNUM_STAR	0x2A
+#define SNUM_MINUS	0x2D
 
 /* types */
 // each note consists in this structure : 16 bytes - TBD whether it needs to be optimized

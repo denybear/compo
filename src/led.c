@@ -40,7 +40,9 @@ void led_ui_instruments () {
 	buffer [0] = MIDI_CC;
 	for (i=0; i<8; i++) {
 		buffer [1] = i + 0x68;
-		buffer [2] = ui_instruments [i];
+		// manage case of LO_BLACK
+		if (ui_instruments [i] == LO_BLACK) buffer [2] = BLACK;
+		else buffer [2] = ui_instruments [i];
 		push_to_list (UI, buffer);			// put in midisend buffer
 	}
 }
@@ -90,7 +92,9 @@ void led_ui_instrument (int instr) {
 
 	buffer [0] = MIDI_CC;
 	buffer [1] = instr + 0x68;
-	buffer [2] = ui_instruments [instr];
+	// manage case of LO_BLACK
+	if (ui_instruments [instr] == LO_BLACK) buffer [2] = BLACK;
+	else buffer [2] = ui_instruments [instr];
 	push_to_list (UI, buffer);			// put in midisend buffer
 }
 

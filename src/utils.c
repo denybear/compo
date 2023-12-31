@@ -289,3 +289,26 @@ void init_volumes (uint8_t vol) {
 	}
 }
 
+
+// based on instrument number, and on the status of the other instruments (muted, solo), indicates whether the instrument should be played or not
+int should_play (int instr) {
+
+	int i;
+
+	// muted
+	if (ui_instruments [instr] == BLACK) return FALSE;
+	if (ui_instruments [instr] == LO_BLACK) return FALSE;
+
+	// solo
+	if (ui_instruments [instr] == HI_RED) return TRUE;
+	if (ui_instruments [instr] == LO_RED) return TRUE;
+
+	// non-defined state (green or yellow or amber); we should look at the other instruments to check whether one of them is solo
+	for (i = 0; i < 8; i++) {
+		if (ui_instruments [i] == HI_RED) return FALSE;
+		if (ui_instruments [i] == LO_RED) return FALSE;
+	}
+
+	// if no other instrument is solo, then we should play
+	return TRUE;
+}

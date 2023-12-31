@@ -16,6 +16,7 @@ void create_quantization_tables ();
 uint32_t quantize (uint32_t, int);
 void init_instruments ();
 void init_volumes (uint8_t);
+int should_play (int);
 
 
 

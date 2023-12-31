@@ -51,14 +51,14 @@ int process ( jack_nframes_t nframes, void *arg )
 				buffer [0] = (notes_to_play [i].status) | (instr2chan (notes_to_play [i].instrument));
 				buffer [1] = notes_to_play [i].key;
 				buffer [2] = notes_to_play [i].vel;
-				// send midi command out to play note
-				push_to_list (OUT, buffer);
+				// play note only if note should be played (mute, solo, etc)
+				if (should_play (notes_to_play [i].instrument)) push_to_list (OUT, buffer); 	// send midi command out to play note
 			}
 		}
 
 		// play metronome
 		if (is_metronome) {
-			// read song to determine whether there are some notes to play
+			// read metronome to determine whether there are some notes to play
 			notes_to_play = read_from_metronome (previous_time_position.bar, previous_time_position.tick, time_position.bar, time_position.tick, &lg);
 
 			// go through the notes that we shall play
@@ -205,7 +205,8 @@ int process ( jack_nframes_t nframes, void *arg )
 	ch = getch();
 //if (ch !=0xFF) printf ("char: %02X\n", ch);
 	switch (ch) {
-		case 'p':	// PLAY
+		case NUM_ENTER:	// PLAY
+		case SNUM_ENTER:
 			// status variable
 			is_play = is_play ? FALSE : TRUE;
 			// reset BBT position
@@ -213,7 +214,8 @@ int process ( jack_nframes_t nframes, void *arg )
 			// copy BBT to previous position as well
 			memcpy (&previous_time_position, &time_position, sizeof (jack_position_t));
 			break;
-		case 'r':	// RECORD
+		case NUM_DOT:	// RECORD
+		case SNUM_DOT:
 			// make sure no selection is in progress to enable record
 			// status variable
 			is_record = is_record ? FALSE : TRUE;
@@ -221,7 +223,8 @@ int process ( jack_nframes_t nframes, void *arg )
 			if (is_play) led_ui_select (ui_current_bar, ui_current_bar);
 			else led_ui_select (ui_limit1, ui_limit2);
 			break;
-		case 't':	// TAP TEMPO
+		case NUM_4:	// TAP TEMPO
+		case SNUM_4:
 			if (tap1 == 0) {
 				tap1 = jack_last_frame_time(client);
 				tap2 = 0;
@@ -251,46 +254,73 @@ int process ( jack_nframes_t nframes, void *arg )
 				}
 			}
 			break;
-		case 'y':	// TEMPO -
+		case NUM_5:	// TEMPO -
+		case SNUM_5:
 			if (time_bpm_multiplier <= 0.1) break;		// if low boundary reached, do nothing
 			time_bpm_multiplier -= 0.1;
 			time_position.beats_per_minute = (int) (time_beats_per_minute * time_bpm_multiplier);
 			break;
-		case 'u':	// TEMPO +
+		case NUM_6:	// TEMPO +
+		case SNUM_6:
 			if (time_bpm_multiplier >= 3.0) break;		// if high boundary reached, do nothing
 			time_bpm_multiplier += 0.1;
 			time_position.beats_per_minute = (int) (time_beats_per_minute * time_bpm_multiplier);
 			break;
-		case 'm':	// METRONOME ON/OFF
+		case NUM_BACK:	// METRONOME ON/OFF
+		// case SNUM_BACK:
 			is_metronome = is_metronome ? FALSE : TRUE;
 			break;
-		case 'c':	// COPY
+		case NUM_1:	// COPY
+		case SNUM_1:
 			bar_process (COPY);
 			break;
-		case 'x':	// CUT
+		case NUM_2:	// CUT
+		case SNUM_2:
 			bar_process (CUT);
 			break;
-		case 'v':	// PASTE
+		case NUM_0:	// PASTE
+		case SNUM_0:
 			bar_process (PASTE);
 			break;
-		case 'q':	// INSERT BARS
-			bar_process (INSERT);
-			break;
-		case 's':	// REMOVE BARS
-			bar_process (REMOVE);
-			break;
-		case 'o':	// COLOR
+		case NUM_000:	// COLOR
+		// case SNUM_000:
+			// empty numpad buffer, as "000" on numpad returns C3A0C3A0C3A0
+//			getch();	// 0xA0
+//			getch();	// 0xC3
+//			getch();	// 0xA0
+//			getch();	// 0xC3
+//			getch();	// 0xA0
 			bar_process (COLOR);
 			break;
-		case 'd':	// TRANSPO -
+		case NUM_7:	// INSERT BARS
+		case SNUM_7:
+			bar_process (INSERT);
+			break;
+		case NUM_8:	// REMOVE BARS
+		case SNUM_8:
+			bar_process (REMOVE);
+			break;
+		case NUM_9:	// TRANSPO -
+		case SNUM_9:
 			transpo_process (ui_current_instrument, MINUS);
 			break;
-		case 'f':	// TRANSPO +
+		case NUM_PLUS:	// TRANSPO +
+		case SNUM_PLUS:
 			transpo_process (ui_current_instrument ,PLUS);
+			break;
+		case NUM_SLASH:	// LOAD
+			break;
+		case NUM_MINUS:	// SAVE
+			break;
+		case SNUM_SLASH:	// QUANTISATION
+			break;
+		case SNUM_MINUS:	// VELOCITY
 			break;
 		default:
 			break;
 	}
+
+	flushinp ();	// flush all the other numpad inputs; very useful to avoid key repeats and "000" key issue (which returns C3A0C3A0C3A0)
 
 	return 0;
 }
@@ -310,7 +340,8 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 	// play the music straight
 	// get midi channel from instrument number, and assign it to midi command
 	buffer [0] = (buffer [0] & 0xF0) | (instr2chan (ui_current_instrument));
-	push_to_list (OUT, buffer);			// put in midisend buffer to play the note straight !
+	// play note only if note should be played (mute, solo, etc)
+	if (should_play (ui_current_instrument)) push_to_list (OUT, buffer);	// put in midisend buffer to play the note straight !
 
 
 	// in case recording is on
@@ -362,29 +393,54 @@ int ui_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 	// check which event has been received
 	switch (cmd) {
 		case MIDI_CC:
+
 			// an "instrument" pad has been pressed
 			// do any work only if "press on", not "press off" (release of the pad)
 			if (!vel) break;
 
 			key = key - 0x68;		// get pad number from midi message
 
-			// set color according to previous color of the pad (green = not muted; red = muted)
+			// set color according to previous color of the pad (green = not muted; red = solo; black = muted; yellow = choice of instrument (1/2); amber = choice of instrument (2/2))
 			switch (ui_instruments [key]) {
 				case HI_GREEN:
-					// the pad was selected before; next move is put to red (mute)
+					// the pad was selected before; next move is put to black (mute)
+					ui_instruments [key] = BLACK;
+					break;
+				case BLACK:
+					// the pad was selected before but was muted; next move is put to hi red (solo)
 					ui_instruments [key] = HI_RED;
 					break;
 				case HI_RED:
-					// the pad was selected before but was muted; next move is put to hi green (active)
+					// the pad was selected before but was solo; next move is put to hi yellow (active)
+					ui_instruments [key] = HI_GREEN;
+					break;
+				case HI_YELLOW:
+					// the pad was selected before (choice of instr); next move is put to hi amber (active)
+					ui_instruments [key] = HI_AMBER;
+					break;
+				case HI_AMBER:
+					// the pad was selected before (choice of instr); next move is put to hi green (active)
 					ui_instruments [key] = HI_GREEN;
 					break;
 				case LO_GREEN:
 					// the pad was not selected before; next move is put to hi green (active)
 					ui_instruments [key] = HI_GREEN;
 					break;
+				case LO_BLACK:	// LO_BLACK is a dummy value to show that pad in inactive
+					// the pad was not selected before; next move is put to black (active but muted)
+					ui_instruments [key] = BLACK;
+					break;
 				case LO_RED:
 					// the pad was not selected before but was muted; next move is put to hi red (active but muted)
 					ui_instruments [key] = HI_RED;
+					break;
+				case LO_YELLOW:
+					// the pad was not selected before (choice of instr); next move is put to active
+					ui_instruments [key] = HI_YELLOW;
+					break;
+				case LO_AMBER:
+					// the pad was not selected before (choice of instr); next move is put to active
+					ui_instruments [key] = HI_AMBER;
 					break;
 				default:
 					break;
@@ -392,9 +448,27 @@ int ui_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 
 			// unlight previous pad, if previous pad is different from pressed pad
 			if (key != ui_current_instrument) {
-				// set new color according to previous color... we could put more colors here !
-				if (ui_instruments [ui_current_instrument] == HI_GREEN) ui_instruments [ui_current_instrument] = LO_GREEN;
-				else ui_instruments [ui_current_instrument] = LO_RED;
+				// set new color according to previous color
+
+				switch (ui_instruments [ui_current_instrument]) {
+					case HI_GREEN:
+						ui_instruments [ui_current_instrument] = LO_GREEN;
+						break;
+					case BLACK:
+						ui_instruments [ui_current_instrument] = LO_BLACK;
+						break;
+					case HI_RED:
+						ui_instruments [ui_current_instrument] = LO_RED;
+						break;
+					case HI_YELLOW:
+						ui_instruments [ui_current_instrument] = LO_YELLOW;
+						break;
+					case HI_AMBER:
+						ui_instruments [ui_current_instrument] = LO_AMBER;
+						break;
+					default:
+						break;
+				}
 				// unlight previous pad
 				led_ui_instrument (ui_current_instrument);
 			}
@@ -404,6 +478,7 @@ int ui_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 			led_ui_instrument (ui_current_instrument);
 
 			// display a full new page of bars for this instrument
+			// except in case of change of instrument
 			led_ui_bars (ui_current_instrument, ui_current_page);
 			break;
 
