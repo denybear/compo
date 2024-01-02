@@ -68,8 +68,6 @@ int is_metronome;					// metronome is in progress
 
 // quantization variables
 int quantizer;							// contains value used for quantization
-uint32_t quantization_range [5][40];	// table used to store quantization parameters : range where note should be in
-uint32_t quantization_value [5][40];	// table used to store quantization parameters : exact value note should take to be quantized
 
 // tap tempo functionality
 jack_nframes_t tap1, tap2;				// used to calculate tap tempo

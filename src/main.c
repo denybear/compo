@@ -69,7 +69,6 @@ static void init_globals ( )
 
 	// init quantization engine
 	quantizer = SIXTEENTH;
-	create_quantization_tables ();		// create all the tables used for quantization
 
 	// create metronome table
 	create_metronome ();

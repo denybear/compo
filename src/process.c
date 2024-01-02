@@ -37,29 +37,23 @@ int process ( jack_nframes_t nframes, void *arg )
 		// compute BBT
 		compute_bbt (nframes, &time_position, FALSE);
 
-		// read song to determine whether there are some notes to play
-		notes_to_play = read_from_song (previous_time_position.bar, previous_time_position.tick, time_position.bar, time_position.tick, &lg);
+		// read song to determine whether there are some notes to play; always read quantized value if available
+		notes_to_play = read_from_song (previous_time_position.bar, previous_time_position.tick, time_position.bar, time_position.tick, &lg, TRUE);
 
 		// go through the notes that we shall play
 		for (i=0; i<lg; i++) {
-			if (notes_to_play [i].already_played == TRUE) {
-				// note was already played "live", no need to replay it this time; but shall be replayed next time
-				notes_to_play [i].already_played = FALSE;
-			}
-			else {
-				// note was not played live; play it
-				buffer [0] = (notes_to_play [i].status) | (instr2chan (notes_to_play [i].instrument));
-				buffer [1] = notes_to_play [i].key;
-				buffer [2] = notes_to_play [i].vel;
-				// play note only if note should be played (mute, solo, etc) or not note on
-				if (should_play (notes_to_play [i].instrument) || ((buffer [0] & 0xF0) != MIDI_NOTEON)) push_to_list (OUT, buffer);	// put in midisend buffer to play the note straight !
-			}
+			// note was not played live; play it
+			buffer [0] = (notes_to_play [i].status) | (instr2chan (notes_to_play [i].instrument));
+			buffer [1] = notes_to_play [i].key;
+			buffer [2] = notes_to_play [i].vel;
+			// play note only if note should be played (mute, solo, etc) or not note on
+			if (should_play (notes_to_play [i].instrument) || ((buffer [0] & 0xF0) != MIDI_NOTEON)) push_to_list (OUT, buffer);	// put in midisend buffer to play the note straight !
 		}
 
 		// play metronome
 		if (is_metronome) {
-			// read metronome to determine whether there are some notes to play
-			notes_to_play = read_from_metronome (previous_time_position.bar, previous_time_position.tick, time_position.bar, time_position.tick, &lg);
+			// read metronome to determine whether there are some notes to play; ; always read quantized value if available
+			notes_to_play = read_from_metronome (previous_time_position.bar, previous_time_position.tick, time_position.bar, time_position.tick, &lg, TRUE);
 
 			// go through the notes that we shall play
 			for (i=0; i<lg; i++) {
@@ -210,11 +204,17 @@ int process ( jack_nframes_t nframes, void *arg )
 		case SNUM_ENTER:
 			// status variable
 			is_play = is_play ? FALSE : TRUE;
+			if (is_play) {		// we start playing: quantize song first
+quantizer = QUARTER;
+				quantize_song (quantizer, THIRTY_SECOND);
+				// reset BBT position
+				compute_bbt (nframes, &time_position, TRUE);
+				// copy BBT to previous position as well
+				memcpy (&previous_time_position, &time_position, sizeof (jack_position_t));
+			}
+			else {
 // send all notes off
-			// reset BBT position
-			compute_bbt (nframes, &time_position, TRUE);
-			// copy BBT to previous position as well
-			memcpy (&previous_time_position, &time_position, sizeof (jack_position_t));
+			}
 			break;
 		case NUM_DOT:	// RECORD
 		case SNUM_DOT:
@@ -346,25 +346,15 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 		note.instrument = ui_current_instrument;
 		note.bar = time_position.bar;
 		note.beat = time_position.beat;
-quantizer = QUARTER;
-		note.tick = quantize (time_position.tick, quantizer);
-printf ("note:%02x time:%d quant:%d\n", (buffer[0] & 0xF0), time_position.tick, note.tick);
-		// if note is to be played in the future, indicate we have played it already
-		if (note.tick >= time_position.tick) note.already_played = TRUE;
-		else note.already_played = FALSE;
-		// check whether tick is on next bar or not
-		if (note.tick == 0xFFFFFFFF) {
-			// check boundaries of bar
-			if (time_position.bar < 511) note.bar = time_position.bar + 1;
-			else note.bar = 0;
-			note.beat = 0;
-			note.tick = 0;
-			note.already_played = TRUE;
-		}
+		note.tick = time_position.tick;
+		note.qbar = 0xFFFF;				// no quantization yet
+		note.qbeat = 0xFF;
+		note.qtick = 0xFFFF;
+
+		// write to song
 		note.status = buffer [0] & 0xF0;		// midi command only, no midi channel (it is set at play time)
 		note.key = buffer [1];
 		note.vel = buffer [2];
-		// add quantized note to song
 		write_to_song (note);
 
 		// we have recorded something in the bar : set bar to a color
@@ -587,13 +577,6 @@ void bar_process (int mode) {
 					led_copy_buffer [j++] = ui_bars [ui_current_instrument][page][bar];
 				}
 				led_copy_length = j;
-/*
-				j = 0;
-				for (i = ui_limit1; i < ui_limit2; i++) {
-					led_copy_buffer [j++] = ui_bars [ui_current_instrument][ui_current_page][i];
-				}
-				led_copy_length = j;
-*/
 				break;
 			case CUT:
 				cut (blimit1, blimit2, ui_current_instrument);		// cut and put in copy buffer
@@ -606,14 +589,6 @@ void bar_process (int mode) {
 					ui_bars [ui_current_instrument][page][bar] = BLACK;
 				}
 				led_copy_length = j;
-/*
-				j = 0;
-				for (i = ui_limit1; i < ui_limit2; i++) {
-					led_copy_buffer [j++] = ui_bars [ui_current_instrument][ui_current_page][i];
-					ui_bars [ui_current_instrument][ui_current_page][i] = BLACK;
-				}
-				led_copy_length = j;
-*/
 				break;
 			case PASTE:
 				// if copy buffer is empty, do nothing
@@ -627,20 +602,6 @@ void bar_process (int mode) {
 					// check we are not out of boundaries
 					if (page < 8) ui_bars [ui_current_instrument][page][bar] = led_copy_buffer [i];
 				}
-/*
-				for (i = 0; i < led_copy_length; i++) {
-					// check whether we are in the same page or we should change page
-					// according to memory structure, it should not be necessary; but you never know
-					// here : we limit UI changes on 2 pages, as this is the max necessary according to UI
-					if ((ui_current_bar + i) < 64) {
-						ui_bars [ui_current_instrument][ui_current_page][ui_current_bar + i] = led_copy_buffer [i];
-					}
-					else {
-						// copy if page number is within boundaries
-						if (ui_current_page < 7) ui_bars  [ui_current_instrument][ui_current_page + 1][(ui_current_bar + i) % 64] = led_copy_buffer [i];
-					}
-				}
-*/
 				break;
 			case INSERT:
 			case REMOVE:

@@ -198,54 +198,104 @@ void compute_bbt (jack_nframes_t nframes, jack_position_t *pos, int new_pos)
 }
 
 
-// create tables to help with quantization computing
-// npb indicates number of notes per bar: 1 = Quarter, 2 = 8th, 3 = 16th, 4 = 32th
-// 2 tables contaning only 1 bar, this is enough
-// table length is NPB + 1
-// one table contains timing ranges of notes, allowing to determine the right timing
-// the other table contains the correct timing to be returned
-void create_quantization_tables () {
-	const int pow [5] = {0, 4, 8, 16, 32};	// number of notes per bar
-	int i, j, nbp;
-	uint32_t time, increment, offset;
+// quantize a tick to the nearest value; tick could be of any value
+uint32_t quantize (uint32_t tick, int quant) {
+	int i;
+	int step;			// number of ticks per "quantized" step
+	uint32_t div, rem;	// temporary variables for calculation
 
-	for (j = 0; j < 5; j++) {			// go from free-timing to 4th, 8th, 16th, 32th
+	if (quant == FREE_TIMING) return tick;	// no quantization required, leave
 
-		nbp = pow [j];					// convert type of note into number of divisions 
-		quantization_range [j][0] = 0;	// special case for element 0
+	step = (int) (time_ticks_per_beat / quant);		// step is a number of ticks per each "quantized" step
+	div = tick / step;
+	rem = tick % step;		// remaining of integer division: we are going to adjust this
 
-		if (nbp !=0) increment = time_beats_per_bar * time_ticks_per_beat / nbp;		// increment between 2 notes, in tick
-		else increment = 0;											// in case of free-timing, table will not be used anyway
+	// adjust remaining to match with quantized value
+	if (rem < step / 2) rem = 0;
+	else rem = step;
 
-		offset = increment / 2;										// offset is the start value
+	// send quantized value of tick
+	return ((div * step) + rem);
+}
 
-		for (i=0; i < (nbp + 1); i++) {								// go through a complete bar
-			// (npb + 1) allows to have an extra value in table, which is useful to determine if a note belongs to the next bar
-			// example : NPB = 1 (quarter note), PPQ = 480
-			// range table is: 0, 240, 720, 1200, 1680, 2160
-			// value table is: 0, 480, 960, 1440, 1920
-			// the last values of tables mean note is on the next bar (at PPQ=480, 1920 is start of next bar; 2160 does not exist in theory)
-			quantization_range [j][i + 1] = offset + (increment * i);
-			quantization_value [j][i] = increment * i;
+
+// go through the whole song and quantize the notes; notes-on are quantized according to quant_noteon parameter
+// duration between notes-on and notes-off are quantized according to quant_noteoff parameter
+void quantize_song (int quant_noteon, int quant_noteoff) {
+
+	int i,j;
+	note_t note;						// temp structure to store BBT info
+	uint32_t tick_on, qtick_on;			// temp structure to store tick info
+	uint32_t tick_off, qtick_off;		// temp structure to store tick info
+	int tick_difference, qtick_difference;
+
+	for (i = 0; i < song_length; i ++) {
+		if (song [i].status == MIDI_NOTEON) {
+			// note on found! First, quantize note on
+			note2tick (song [i], &tick_on, FALSE);			// number of ticks from BBT (0,0,0)
+			qtick_on = quantize (tick_on, quant_noteon);		// quantized number of ticks
+			tick2note (qtick_on, &song [i], TRUE);			// store to qBBT of the song's note
+
+			// let's find the first note off with the same key and instrument; it should be after note-on
+			for (j = i; j < song_length; j++) {
+				if ((song [j].status == MIDI_NOTEOFF) && (song [j].instrument == song [i].instrument) && (song [j].key == song [i].key)) {
+					// we found note off corresponding to note on
+					// determine number of ticks between note on and note off
+					note2tick (song [j], &tick_off, FALSE);			// number of ticks from BBT (0,0,0)
+					tick_difference = tick_off - tick_on;
+					if (tick_difference <= 0) {
+						// negative or null time difference; this should never happen
+						printf ("Quantization ERROR - negative time difference\n");
+						tick_difference = 0;
+					}
+					qtick_difference = quantize (tick_difference, quant_noteoff);	// quantized time difference between note_on & note_off
+					if (qtick_difference == 0) {
+						// null quantized time difference; this should never happen
+						printf ("Quantization ERROR - null quantized time difference\n");
+						qtick_difference = (uint32_t) (time_ticks_per_beat / THIRTY_SECOND);		// set to 32th note
+					}
+					qtick_difference --;		// decrement so note_off is at the end of a beat; not to start of a beat
+					tick2note ((qtick_difference + qtick_on), &song [j], TRUE);		// add to quantized BBT of note_on, and store to quantized BBT of note_off
+				}
+			}
+			// check if we did not find note off corresponding to note on
+			if (j == song_length) {
+					printf ("Quantization ERROR - no note-off detected for a note-on\n");
+			}
 		}
-
-		if (nbp !=0) quantization_value [j][i-1] = 0xFFFFFFFF;	// force last value of table to FFFFFFFF to indicate it is on next bar
+		else {
+			// note-off and other midi events; we don't quantize these
+			// note-off should be quantized as part of note-on process
+			// don't do anything
+		}
 	}
 }
 
 
-// quantize a tick to the nearest value, according to quantization table
-// in case tick is on next bar, return 0xFFFFFFFF (as it s defined in quantization table)
-uint32_t quantize (uint32_t tick, int quant) {
-	const int pow [5] = {0, 4, 8, 16, 32};	// number of notes per bar
-	int i, nbp;
+// convert BBT values of a note to number of ticks from BBT (0,0,0)
+// quantized indicates whether BBT info is in BBT structure or qBBT
+void note2tick (note_t note, uint32_t *tick, int quantized) {
 
-	nbp = pow [quant];					// convert type of note into number of divisions 
+	if (quantized) *tick = ((note.qbar * (int) (time_ticks_per_beat * time_beats_per_bar)) + note.qtick);
+	else *tick = ((note.bar * (int) (time_ticks_per_beat * time_beats_per_bar)) + note.tick);
+}
 
-	if (quant == FREE_TIMING) return tick;
 
-	for (i=0; i < (nbp + 1); i++) {		// go through a complete bar
-		if ((tick >= quantization_range [quant][i]) && (tick < quantization_range [quant][i+1])) return (quantization_value [quant][i]);
+// convert number of ticks from BBT (0,0,0) to BBT values of a note 
+// quantized indicates whether BBT info is in BBT structure or qBBT
+void tick2note (uint32_t tick, note_t *note, int quantized) {
+
+	int ticks_per_bar;
+
+	ticks_per_bar = (int) (time_ticks_per_beat * time_beats_per_bar);
+
+	if (quantized) {
+		note->qbar = tick / ticks_per_bar;
+		note->qtick = tick % ticks_per_bar;
+	}
+	else {
+		note->bar = tick / ticks_per_bar;
+		note->tick = tick % ticks_per_bar;
 	}
 }
 

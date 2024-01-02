@@ -63,8 +63,8 @@
 #define FREE_TIMING		0
 #define	QUARTER			1
 #define EIGHTH			2
-#define SIXTEENTH		3
-#define THIRTY_SECOND	4
+#define SIXTEENTH		4
+#define THIRTY_SECOND	8
 
 /* copy_cut values */
 #define COPY		0
@@ -121,15 +121,17 @@
 /* types */
 // each note consists in this structure : 16 bytes - TBD whether it needs to be optimized
 typedef struct {
-	uint16_t bar;
+	uint16_t bar;			// realtime BBT
 	uint16_t tick;
 	uint8_t beat;
-	uint8_t	already_played;
+	uint16_t qbar;			// quantized BBT
+	uint16_t qtick;
+	uint8_t qbeat;
 	uint8_t instrument;
 	uint8_t status;			// MIDI cmd only, not the channel
 	uint8_t key;
 	uint8_t vel;
-	uint8_t padding [6];	// goal is to make 16 bytes, ie. 2 x 64 bits
+	uint8_t padding [2];	// goal is to make 16 bytes, ie. 2 x 64 bits
 } note_t;
 
 
