@@ -12,7 +12,7 @@
 #include "song.h"
 
 
-// convert pad midi number to bar number : ie 0x00-0x77 to 0-63
+// convert pad midi number to bar number : ie 0x00-0x3F to 0-63
 uint8_t midi2bar (uint8_t midi) {
 
 	uint8_t bar;
@@ -23,7 +23,7 @@ uint8_t midi2bar (uint8_t midi) {
 }
 
 
-// convert bar number to pad midi number : ie 0-63 to 0x00-0x77
+// convert bar number to pad midi number : ie 0-63 to 0x00-0x3F
 uint8_t bar2midi (uint8_t bar) {
 
 	uint8_t midi;

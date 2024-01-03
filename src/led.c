@@ -111,6 +111,7 @@ void led_ui_page (int page) {
 
 // light selection between limit1 and limit2 in high green/red; erase previous selection; processing is done so that number of midi messages is optimized
 // return first selected bar, which is always the min (lim1, lim2)
+// lim1 and lim2 are both inclusive; ie. leds are lighted from lim1 to lim2 included
 uint8_t led_ui_select (int lim1, int lim2) {
 
 	uint8_t buffer [4], color;

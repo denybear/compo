@@ -213,7 +213,15 @@ quantizer = QUARTER;
 				memcpy (&previous_time_position, &time_position, sizeof (jack_position_t));
 			}
 			else {
-// send all notes off
+				// send all notes off to all channels
+				for (i = 0; i < 8; i++) {
+					buffer [0] = MIDI_CC | instr2chan (i);
+					buffer [1] = MIDI_CC_MUTE;
+					buffer [2] = 0x00;
+					// send midi command out to play note
+					push_to_list (OUT, buffer);
+					// midi events will be sent during the next process call
+				}
 			}
 			break;
 		case NUM_DOT:	// RECORD
@@ -488,6 +496,7 @@ int ui_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 					// we released the last pad selected
 					ui_limit2_pressed = FALSE;		// last bar valid
 				}
+// HERE to change cursor position while playing; or maybe on noteon???
 			}
 			break;
 
@@ -565,6 +574,7 @@ void bar_process (int mode) {
 			
 		blimit1 = ui_limit1 + (ui_current_page * 64);		// determine start bar number from page num
 		blimit2 = ui_limit2 + (ui_current_page * 64);		// determine end bar number from page num
+		blimit2++;											// blimit2 shall be exclusive, so we add 1 to ui_limit2 which is inclusive
 
 		switch (mode) {
 			case COPY:

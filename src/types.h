@@ -46,6 +46,7 @@
 #define MIDI_RESERVED	0xF9
 #define MIDI_PLAY		0xFA
 #define MIDI_STOP		0xFC
+#define MIDI_CC_MUTE	0x78
 
 /* define status, etc */
 #define TRUE	1
