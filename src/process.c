@@ -199,13 +199,17 @@ int process ( jack_nframes_t nframes, void *arg )
 	/**************************************/
 
 	ch = getch();
+//	flushinp ();	// flush all the other numpad inputs; very useful to avoid key repeats and "000" key issue (which returns C3A0C3A0C3A0)
+
 	switch (ch) {
 		case NUM_ENTER:	// PLAY
 		case SNUM_ENTER:
+		case 'p':
 			// status variable
 			is_play = is_play ? FALSE : TRUE;
 			if (is_play) {		// we start playing: quantize song first
-quantizer = QUARTER;
+if (ch=='p') quantize_song (FREE_TIMING, THIRTY_SECOND);
+else
 				quantize_song (quantizer, THIRTY_SECOND);
 				// reset BBT position
 				compute_bbt (nframes, &time_position, TRUE);
@@ -294,7 +298,8 @@ quantizer = QUARTER;
 			break;
 		case NUM_000:	// COLOR
 		// case SNUM_000:
-			bar_process (COLOR);
+			if ((color_repeat % 3) == 0) bar_process (COLOR);		// call color only 1 time out of 3
+			color_repeat++;
 			break;
 		case NUM_7:	// INSERT BARS
 		case SNUM_7:
@@ -323,8 +328,6 @@ quantizer = QUARTER;
 		default:
 			break;
 	}
-
-	flushinp ();	// flush all the other numpad inputs; very useful to avoid key repeats and "000" key issue (which returns C3A0C3A0C3A0)
 
 	return 0;
 }
@@ -624,7 +627,7 @@ void bar_process (int mode) {
 					limit1 = blimit2;
 					limit2 = blimit1;
 				}
-
+printf ("limit1:%d, limit2:%d\n", limit1, limit2);
 				// first we cut all the bars of song from limit (beg or end of selection) position onwards
 				cut (limit1, 512, ui_current_instrument);			// cut and put in copy buffer
 				// copy color of bars to specific buffer and clear bars until end of the song
@@ -649,7 +652,7 @@ void bar_process (int mode) {
 				break;
 			case COLOR:
 				// change color of bars to their next color
-				for (i = ui_limit1; i < ui_limit2; i++) {
+				for (i = ui_limit1; i <= ui_limit2; i++) {		// ui_limit2 is inclusive, therefore <=
 					ui_bars [ui_current_instrument][ui_current_page][i] = color_ui_bar (ui_bars [ui_current_instrument][ui_current_page][i]);
 				}
 				break;

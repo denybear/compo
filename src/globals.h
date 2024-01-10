@@ -69,4 +69,6 @@ extern int quantizer;						// contains value used for quantization
 // tap tempo functionality
 extern jack_nframes_t tap1, tap2;			// used to calculate tap tempo
 
+// to manage 000 key issue (which returns C3A0C3A0C3A0)
+extern int color_repeat;
 

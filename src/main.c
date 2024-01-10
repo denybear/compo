@@ -68,7 +68,7 @@ static void init_globals ( )
 	keypad (stdscr, TRUE);	// special keys can be captured
 
 	// init quantization engine
-	quantizer = SIXTEENTH;
+	quantizer = THIRTY_SECOND;
 
 	// create metronome table
 	create_metronome ();
@@ -81,6 +81,7 @@ static void init_globals ( )
 	copy_length = 0;		// length of copy buffer: empty
 	tap1 = 0;				// tap tempo
 	tap2 = 0;
+	color_repeat = 0;
 }
 
 

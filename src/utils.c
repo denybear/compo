@@ -211,7 +211,7 @@ uint32_t quantize (uint32_t tick, int quant) {
 	rem = tick % step;		// remaining of integer division: we are going to adjust this
 
 	// adjust remaining to match with quantized value
-	if (rem < step / 2) rem = 0;
+	if (rem < (int) (step / 2)) rem = 0;
 	else rem = step;
 
 	// send quantized value of tick
@@ -246,16 +246,22 @@ void quantize_song (int quant_noteon, int quant_noteoff) {
 					if (tick_difference <= 0) {
 						// negative or null time difference; this should never happen
 						printf ("Quantization ERROR - negative time difference\n");
+						// printf ("note on: index:%d note:%02x bar:%d tick:%d, tick-on:%d, qbar:%d qtick:%d, qtick-on:%d\n", i, song[i].key, song[i].bar, song[i].tick, tick_on, song[i].qbar, song[i].qtick, qtick_on);
+						// printf ("note off: index:%d note:%02x bar:%d tick:%d, tick_off:%d qbar:%d qtick:%d\n", j, song[j].key, song[j].bar, song[j].tick, tick_off, song[j].qbar, song[j].qtick);
 						tick_difference = 0;
 					}
 					qtick_difference = quantize (tick_difference, quant_noteoff);	// quantized time difference between note_on & note_off
 					if (qtick_difference == 0) {
-						// null quantized time difference; this should never happen
-						printf ("Quantization ERROR - null quantized time difference\n");
+						// null quantized time difference; this can happen when note-on and note-off are very close
+						// printf ("Quantization ERROR - null quantized time difference\n");
+						// printf ("tick_difference:%d, qtick_difference:%d", tick_difference, qtick_difference);
+						// printf ("note on: index:%d note:%02x bar:%d tick:%d, tick-on:%d, qbar:%d qtick:%d, qtick-on:%d\n", i, song[i].key, song[i].bar, song[i].tick, tick_on, song[i].qbar, song[i].qtick, qtick_on);
+						// printf ("note off: index:%d note:%02x bar:%d tick:%d, tick_off:%d qbar:%d qtick:%d\n", j, song[j].key, song[j].bar, song[j].tick, tick_off, song[j].qbar, song[j].qtick);
 						qtick_difference = (uint32_t) (time_ticks_per_beat / THIRTY_SECOND);		// set to 32th note
 					}
 					qtick_difference --;		// decrement so note_off is at the end of a beat; not to start of a beat
 					tick2note ((qtick_difference + qtick_on), &song [j], TRUE);		// add to quantized BBT of note_on, and store to quantized BBT of note_off
+					break;		// end the loop as we found note-off
 				}
 			}
 			// check if we did not find note off corresponding to note on
@@ -292,10 +298,12 @@ void tick2note (uint32_t tick, note_t *note, int quantized) {
 	if (quantized) {
 		note->qbar = tick / ticks_per_bar;
 		note->qtick = tick % ticks_per_bar;
+		note->qbeat = note->qtick / (int) (time_ticks_per_beat);
 	}
 	else {
 		note->bar = tick / ticks_per_bar;
 		note->tick = tick % ticks_per_bar;
+		note->beat = note->tick / (int) (time_ticks_per_beat);
 	}
 }
 

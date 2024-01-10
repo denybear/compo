@@ -458,7 +458,7 @@ void display_song (int lg, note_t *sg, char * st) {
 
 	printf ("out: %x, Length:%d - Test:%s\n", sg, lg, st);
 	for (i=0; i<lg; i++) {
-		printf ("index:%d, bar:%d, beat:%d, tick:%d, instr:%d\n", i, sg[i].bar, sg[i].beat, sg[i].tick, sg[i].instrument);
+		printf ("index:%d, bar:%d, beat:%d, tick:%d, qbar:%d, qbeat:%d, qtick:%d, instr:%d\n", i, sg[i].bar, sg[i].beat, sg[i].tick, sg[i].qbar, sg[i].qbeat, sg[i].qtick, sg[i].instrument);
 	}
 	printf ("\n");
 }
