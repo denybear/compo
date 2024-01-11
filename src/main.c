@@ -10,6 +10,7 @@
 #include "utils.h"
 #include "led.h"
 #include "song.h"
+#include "disk.h"
 
 
 /*************/
@@ -82,6 +83,12 @@ static void init_globals ( )
 	tap1 = 0;				// tap tempo
 	tap2 = 0;
 	color_repeat = 0;
+
+	// timing and tempo
+	time_beats_per_bar = 4.0;
+	time_beat_type = 4.0;
+	time_ticks_per_beat = 480.0;
+	time_beats_per_minute = 120.0;
 }
 
 

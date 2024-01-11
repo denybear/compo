@@ -10,6 +10,7 @@
 #include "utils.h"
 #include "led.h"
 #include "song.h"
+#include "disk.h"
 
 
 // write a note to song structure; insert it to the right place
@@ -593,7 +594,7 @@ void create_metronome () {
 		note.qtick = 0xFFFF;
 		note.status = MIDI_NOTEON;
 		note.key = 76;					// high wood block
-		note.vel = 64;
+		note.vel = 127;					// max velocity
 		memcpy (&metronome [(i*8) + 0], &note, sizeof (note_t));
 
 		// note 1 off

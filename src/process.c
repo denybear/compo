@@ -11,6 +11,7 @@
 #include "utils.h"
 #include "led.h"
 #include "song.h"
+#include "disk.h"
 
 
 // main process callback called at capture of (nframes) frames/samples
@@ -639,6 +640,12 @@ printf ("limit1:%d, limit2:%d\n", limit1, limit2);
 					ui_bars [ui_current_instrument][page][bar] = BLACK;
 				}
 				led_copy_length = j;
+
+				// specific process for REMOVE: we delete (clear) the bars to be removed
+				// this could be done during paste, except that sometimes there are no notes to be pasted and consequently, the bars are not erased
+				if (mode == REMOVE) {
+					copy_cut (limit2, limit1, ui_current_instrument, DEL);				// erase bars in the song
+				}
 
 				// then we paste from new position onwards
 				paste (limit2, ui_current_instrument);				// paste from copy buffer

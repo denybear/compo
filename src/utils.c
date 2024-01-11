@@ -10,6 +10,7 @@
 #include "utils.h"
 #include "led.h"
 #include "song.h"
+#include "disk.h"
 
 
 // convert pad midi number to bar number : ie 0x00-0x3F to 0-63

@@ -10,6 +10,7 @@
 #include "utils.h"
 #include "led.h"
 #include "song.h"
+#include "disk.h"
 
 
 // returns the color of the "bar" cursor
