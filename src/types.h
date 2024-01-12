@@ -132,7 +132,8 @@ typedef struct {
 	uint8_t status;			// MIDI cmd only, not the channel
 	uint8_t key;
 	uint8_t vel;
-	uint8_t padding [2];	// goal is to make 16 bytes, ie. 2 x 64 bits
+	uint8_t color;
+	uint8_t padding [1];	// goal is to make 16 bytes, ie. 2 x 64 bits
 } note_t;
 
 
