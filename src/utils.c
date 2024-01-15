@@ -229,13 +229,48 @@ void quantize_song (int quant_noteon, int quant_noteoff) {
 	uint32_t tick_on, qtick_on;			// temp structure to store tick info
 	uint32_t tick_off, qtick_off;		// temp structure to store tick info
 	int tick_difference, qtick_difference;
+	uint8_t first_note_on [8];			// TRUE if first note-on found in the song, false otherwise; 1 variable per instrument
 
+	// how quantization is done:
+	// each first note-on of an instrument is quantized according its absolute timing in the song
+	// each next note-on of an instrument is quantized according its relative timing compared to previous note-on of the same instrument
+	// (said differently, time difference between the 2 consecutive notes-on of an instrument is quantized with quant_noteon value) 
+	// each note-off of an instrument is quantized according its relative timing compared to previous note-on of the same instrument and same key
+	// (said differently, time difference between note-on and note-off of an instrument and a key is quantized with quant_noteoff value) 
+
+	memset (first_note_on, TRUE, 8);	// set first_note_on to TRUE
+	
 	for (i = 0; i < song_length; i ++) {
 		if (song [i].status == MIDI_NOTEON) {
 			// note on found! First, quantize note on
-			note2tick (song [i], &tick_on, FALSE);			// number of ticks from BBT (0,0,0)
-			qtick_on = quantize (tick_on, quant_noteon);		// quantized number of ticks
-			tick2note (qtick_on, &song [i], TRUE);			// store to qBBT of the song's note
+
+			if (first_note_on [song[i].instrument]) {
+				// found the first note-on of the song for an instrument. We quantize it
+				note2tick (song [i], &tick_on, FALSE);			// number of ticks from BBT (0,0,0)
+				qtick_on = quantize (tick_on, quant_noteon);	// quantized number of ticks
+				tick2note (qtick_on, &song [i], TRUE);			// store to qBBT of the song's note
+				first_note_on [song[i].instrument] = FALSE;
+			}
+
+			// let's find the next note-on for the same instrument; time difference between the 2 note-on shall be quantized
+			for (j = (i + 1); j < song_length; j++) {
+				if ((song [j].status == MIDI_NOTEON) && (song [j].instrument == song [i].instrument)) {
+					// we found next note on with the same instrument as previous note on
+					// determine number of ticks between the 2 note-on
+					note2tick (song [j], &tick_off, FALSE);			// number of ticks from BBT (0,0,0)
+					tick_difference = tick_off - tick_on;
+					if (tick_difference < 0) {
+						// negative time difference; this should never happen
+						printf ("Quantization ERROR - negative time difference between 2 notes-on\n");
+						// printf ("note on: index:%d note:%02x bar:%d tick:%d, tick-on:%d, qbar:%d qtick:%d, qtick-on:%d\n", i, song[i].key, song[i].bar, song[i].tick, tick_on, song[i].qbar, song[i].qtick, qtick_on);
+						// printf ("note off: index:%d note:%02x bar:%d tick:%d, tick_off:%d qbar:%d qtick:%d\n", j, song[j].key, song[j].bar, song[j].tick, tick_off, song[j].qbar, song[j].qtick);
+						tick_difference = 0;
+					}
+					qtick_difference = quantize (tick_difference, quant_noteon);	// quantized time difference between the 2 notes-on
+					tick2note ((qtick_difference + qtick_on), &song [j], TRUE);		// add to quantized BBT of note_on, and store to quantized BBT of next note_on
+					break;		// end the loop as we found note-on
+				}
+			}
 
 			// let's find the first note off with the same key and instrument; it should be after note-on
 			for (j = i; j < song_length; j++) {
@@ -246,7 +281,7 @@ void quantize_song (int quant_noteon, int quant_noteoff) {
 					tick_difference = tick_off - tick_on;
 					if (tick_difference <= 0) {
 						// negative or null time difference; this should never happen
-						printf ("Quantization ERROR - negative time difference\n");
+						printf ("Quantization ERROR - negative time difference between note-on and note-off\n");
 						// printf ("note on: index:%d note:%02x bar:%d tick:%d, tick-on:%d, qbar:%d qtick:%d, qtick-on:%d\n", i, song[i].key, song[i].bar, song[i].tick, tick_on, song[i].qbar, song[i].qtick, qtick_on);
 						// printf ("note off: index:%d note:%02x bar:%d tick:%d, tick_off:%d qbar:%d qtick:%d\n", j, song[j].key, song[j].bar, song[j].tick, tick_off, song[j].qbar, song[j].qtick);
 						tick_difference = 0;

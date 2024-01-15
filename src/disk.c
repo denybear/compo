@@ -21,9 +21,9 @@ int load (uint8_t name, char * directory) {
 
 	FILE *fp;
 	int i;
-	char filename[100];		// temp structure for file name
-	char line [100];		// temp line to be written in the file
-
+	char filename [100];		// temp structure for file name
+	char str1 [50], str2 [50], str3 [50];
+	uint8_t instr [8];			// (drum), piano, elec piano, hammond organ, fingered bass, clean guitar, string ensemble, brass ensemble
 
 	// create file path
 	sprintf (filename, "%s/%02x", directory, number);
@@ -35,8 +35,62 @@ int load (uint8_t name, char * directory) {
 		return 0;
 	}
 
-	// read number of tracks
-//	fread ((int *) &number_of_tracks, sizeof (int), 1, fp);
+	// opening bracket
+	fscanf (fp, "%s %s", str1);
+
+	// instruments; first instrument does not count (drum channel)
+	fscanf (fp, "%s, %s, %d, %d, %d, %d, %d, %d, %d, %d, %s", str1, str2, &instr [0], &instr [1], &instr [2], &instr [3], &instr [4], &instr [5], &instr [6], &instr [7], str3);
+
+	//**********HERE
+
+
+	// tempo values
+	fprintf (fp, "\t\"beats_per_bar\": %f,\n", time_beats_per_bar);
+	fprintf (fp, "\t\"beat_type\": %f,\n", time_beat_type);
+	fprintf (fp, "\t\"ticks_per_beat\": %f,\n", time_ticks_per_beat);
+	fprintf (fp, "\t\"ticks_beats_per_minute\": %f,\n", time_beats_per_minute);
+	
+	// quantizer
+	fprintf (fp, "\t\"quantizer\": %d,\n", quantizer);
+
+	// song length
+	fprintf (fp, "\t\"song_length\": %d,\n", song_length);
+
+	// notes of song
+	fprintf (fp, "\t\"notes\": [\n");
+	
+	for (i = 0; i < song_length; i++) { 
+		// opening bracket
+		fprintf (fp, "\t\t{\n");
+
+		// note
+		fprintf (fp, "\t\t\t\"instrument\": %d,\n", song [i].instrument);
+		fprintf (fp, "\t\t\t\"status\": \"%02X\",\n", song [i].status);
+		fprintf (fp, "\t\t\t\"key\": \"%02X\",\n", song [i].key);
+		fprintf (fp, "\t\t\t\"velocity\": \"%02X\",\n", song [i].vel);
+		fprintf (fp, "\t\t\t\"color\": \"%02X\",\n", song [i].color);
+		fprintf (fp, "\t\t\t\"bar\": %d,\n", song [i].bar);
+		fprintf (fp, "\t\t\t\"beat\": %d,\n", song [i].beat);
+		fprintf (fp, "\t\t\t\"tick\": %d,\n", song [i].tick);
+		fprintf (fp, "\t\t\t\"qbar\": %d,\n", song [i].qbar);
+		fprintf (fp, "\t\t\t\"qbeat\": %d,\n", song [i].qbeat);
+		fprintf (fp, "\t\t\t\"qtick\": %d,\n", song [i].qtick);
+
+		// closing bracket; add comma except for last element of the list
+		if (i == (song_length - 1)) fprintf (fp, "\t\t}\n");
+		else fprintf (fp, "\t\t},\n");
+	}
+
+	// closing square bracket (notes of song)
+	fprintf (fp, "\t]\n");
+
+	// closing final bracket
+	fprintf (fp, "}\n");
+
+
+
+
+
 
 	// close file
 	fclose (fp);
@@ -50,8 +104,8 @@ int save (uint8_t name, char * directory) {
 
 	FILE *fp;
 	int i;
-	char filename[100];		// temp structure for file name
-	char line [100];		// temp line to be written in the file
+	char filename [100];		// temp structure for file name
+	const uint8_t instr [8] = {0, 0, 2, 16, 33, 27, 48, 61};		// (drum), piano, elec piano, hammond organ, fingered bass, clean guitar, string ensemble, brass ensemble
 
 
 	// create file path
@@ -65,71 +119,53 @@ int save (uint8_t name, char * directory) {
 	}
 
 	// opening bracket
-	sprintf (line, "{\n");
+	fprintf (fp, "{\n");
+
+	// instruments; first instrument does not count (drum channel)
+	fprintf (fp, "\t\"instruments\": [%d, %d, %d, %d, %d, %d, %d, %d]\n", instr [0], instr [1], instr [2], instr [3], instr [4], instr [5], instr [6], instr [7]);
 
 	// tempo values
-	sprintf (line, "\t\"beats_per_bar\": %f,\n", time_beats_per_bar);
-	fwrite ((char *) line, sizeof (line), 1, fp);
-	sprintf (line, "\t\"beat_type\": %f,\n", time_beat_type);
-	fwrite ((char *) line, sizeof (line), 1, fp);
-	sprintf (line, "\t\"ticks_per_beat\": %f,\n", time_ticks_per_beat);
-	fwrite ((char *) line, sizeof (line), 1, fp);
-	sprintf (line, "\t\"ticks_beats_per_minute\": %f,\n", time_beats_per_minute);
-	fwrite ((char *) line, sizeof (line), 1, fp);
+	fprintf (fp, "\t\"beats_per_bar\": %f,\n", time_beats_per_bar);
+	fprintf (fp, "\t\"beat_type\": %f,\n", time_beat_type);
+	fprintf (fp, "\t\"ticks_per_beat\": %f,\n", time_ticks_per_beat);
+	fprintf (fp, "\t\"ticks_beats_per_minute\": %f,\n", time_beats_per_minute);
 	
 	// quantizer
-	sprintf (line, "\t\"quantizer\": %d,\n", quantizer);
-	fwrite ((char *) line, sizeof (line), 1, fp);
+	fprintf (fp, "\t\"quantizer\": %d,\n", quantizer);
 
 	// song length
-	sprintf (line, "\t\"song_length\": %d,\n", song_length);
-	fwrite ((char *) line, sizeof (line), 1, fp);
+	fprintf (fp, "\t\"song_length\": %d,\n", song_length);
 
 	// notes of song
-	sprintf (line, "\t\"notes\": [\n");
-	fwrite ((char *) line, sizeof (line), 1, fp);
+	fprintf (fp, "\t\"notes\": [\n");
 	
 	for (i = 0; i < song_length; i++) { 
 		// opening bracket
-		sprintf (line, "\t\t{\n");
-		fwrite ((char *) line, sizeof (line), 1, fp);
+		fprintf (fp, "\t\t{\n");
 
 		// note
-		sprintf (line, "\t\t\t\"instrument\": %d,\n", song [i].instrument);
-		fwrite ((char *) line, sizeof (line), 1, fp);
-		sprintf (line, "\t\t\t\"status\": \"%02X\",\n", song [i].status);
-		fwrite ((char *) line, sizeof (line), 1, fp);
-		sprintf (line, "\t\t\t\"key\": \"%02X\",\n", song [i].key);
-		fwrite ((char *) line, sizeof (line), 1, fp);
-		sprintf (line, "\t\t\t\"velocity\": \"%02X\",\n", song [i].vel);
-		fwrite ((char *) line, sizeof (line), 1, fp);
-		sprintf (line, "\t\t\t\"color\": \"%02X\",\n", song [i].color);
-		fwrite ((char *) line, sizeof (line), 1, fp);
-		sprintf (line, "\t\t\t\"bar\": %d,\n", song [i].bar);
-		fwrite ((char *) line, sizeof (line), 1, fp);
-		sprintf (line, "\t\t\t\"beat\": %d,\n", song [i].beat);
-		fwrite ((char *) line, sizeof (line), 1, fp);
-		sprintf (line, "\t\t\t\"tick\": %d,\n", song [i].tick);
-		fwrite ((char *) line, sizeof (line), 1, fp);
-		sprintf (line, "\t\t\t\"qbar\": %d,\n", song [i].qbar);
-		fwrite ((char *) line, sizeof (line), 1, fp);
-		sprintf (line, "\t\t\t\"qbeat\": %d,\n", song [i].qbeat);
-		fwrite ((char *) line, sizeof (line), 1, fp);
-		sprintf (line, "\t\t\t\"qtick\": %d,\n", song [i].qtick);
-		fwrite ((char *) line, sizeof (line), 1, fp);
+		fprintf (fp, "\t\t\t\"instrument\": %d,\n", song [i].instrument);
+		fprintf (fp, "\t\t\t\"status\": \"%02X\",\n", song [i].status);
+		fprintf (fp, "\t\t\t\"key\": \"%02X\",\n", song [i].key);
+		fprintf (fp, "\t\t\t\"velocity\": \"%02X\",\n", song [i].vel);
+		fprintf (fp, "\t\t\t\"color\": \"%02X\",\n", song [i].color);
+		fprintf (fp, "\t\t\t\"bar\": %d,\n", song [i].bar);
+		fprintf (fp, "\t\t\t\"beat\": %d,\n", song [i].beat);
+		fprintf (fp, "\t\t\t\"tick\": %d,\n", song [i].tick);
+		fprintf (fp, "\t\t\t\"qbar\": %d,\n", song [i].qbar);
+		fprintf (fp, "\t\t\t\"qbeat\": %d,\n", song [i].qbeat);
+		fprintf (fp, "\t\t\t\"qtick\": %d,\n", song [i].qtick);
 
 		// closing bracket; add comma except for last element of the list
-		if (i == (song_length - 1)) sprintf (line, "\t\t}\n");
-		else sprintf (line, "\t\t},\n");
-		fwrite ((char *) line, sizeof (line), 1, fp);
+		if (i == (song_length - 1)) fprintf (fp, "\t\t}\n");
+		else fprintf (fp, "\t\t},\n");
 	}
 
 	// closing square bracket (notes of song)
-	sprintf (line, "\t]\n");
-	fwrite ((char *) line, sizeof (line), 1, fp);
+	fprintf (fp, "\t]\n");
 
 	// closing final bracket
-	sprintf (line, "}\n");
+	fprintf (fp, "}\n");
 
 	// close file
 	fclose (fp);
