@@ -6,11 +6,11 @@
 OBJ = main.o process.o utils.o led.o song.o disk.o
 
 #Set any dependant header files so that if they are edited they cause a complete re-compile (e.g. main.h some_subfunctions.h some_definitions_file.h ), or leave blank
-DEPS = jack/jack.h jack/midiport.h types.h main.h process.h utils.h led.h song.h disk.h
+DEPS = jack/jack.h jack/midiport.h types.h main.h process.h utils.h led.h song.h disk.h midiwriter.h
 
 #Any special libraries you are using in your project (e.g. -lbcm2835 -lrt `pkg-config --libs gtk+-3.0` ), or leave blank
 #LIBS = -L/usr/lib/i386-linux-gnu -ljack
-LIBS = -ljack -lm -lncurses -L/usr/local/lib64
+LIBS = -ljack -lm -lncurses -lcjson -L/usr/local/lib64
 
 
 #Set any compiler flags you want to use (e.g. -I/usr/include/somefolder `pkg-config --cflags gtk+-3.0` ), or leave blank

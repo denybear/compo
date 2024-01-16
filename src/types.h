@@ -19,6 +19,7 @@
 #endif
 #include <jack/jack.h>
 #include <jack/midiport.h>
+#include <cjson/cJSON.h>
 
 
 /* constants */
