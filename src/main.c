@@ -39,6 +39,9 @@ static void init_globals ( )
 	copy_length = 0;
 	memset (led_copy_buffer, BLACK, 512);
 	led_copy_length = 0;
+	// empty instrument and volumes pre channel structures
+	memset (instrument_list, 0, 8);
+	memset (volume_list, 0, 8);
 	// fill UI structures with start values to set up leds
 	memset (ui_instruments, LO_GREEN, 8);
 	memset (ui_pages, LO_GREEN, 8);
@@ -277,9 +280,11 @@ int main ( int argc, char *argv[] )
 
 
 	// assign midi instrument to each channel
-	init_instruments ();
+	const uint8_t default_instr [8] = {0, 0, 2, 16, 33, 27, 48, 61};		// (drum), piano, elec piano, hammond organ, fingered bass, clean guitar, string ensemble, brass ensemble
+	set_instruments (default_instr);
 	// set volume for each channel to 64 (mid-volume)
-	init_volumes (64);
+	const uint8_t default_vol  [8] = {64, 64, 64, 64, 64, 64, 64, 64};		// volume per channel
+	set_volumes (default_vol);
 
 	// light leds on the UI
 	led_ui_instruments ();

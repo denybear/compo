@@ -72,3 +72,6 @@ extern jack_nframes_t tap1, tap2;			// used to calculate tap tempo
 // to manage 000 key issue (which returns C3A0C3A0C3A0)
 extern int color_repeat;
 
+// list of midi instrument per channel, volume per channel
+extern uint8_t instrument_list [8];
+extern uint8_t volume_list [8];

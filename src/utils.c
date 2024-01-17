@@ -344,21 +344,20 @@ void tick2note (uint32_t tick, note_t *note, int quantized) {
 }
 
 
-// init a midi instrument to each channel
+// set a midi instrument to one channel by sending midi commands
+// midi send is optimized (no midi command sent if no change in instruments)
 // https://www.recordingblogs.com/wiki/midi-program-change-message
-void init_instruments () {
+void set_instrument (int i, uint8_t instr) {
 
 	uint8_t buffer [4], chan;
-	int i;
-	const uint8_t instr [8] = {0, 0, 2, 16, 33, 27, 48, 61};		// (drum), piano, elec piano, hammond organ, fingered bass, clean guitar, string ensemble, brass ensemble
 	
-	for (i = 0; i < 8; i++){
-
+	if (instrument_list [i] != instr [i]) {
+		instrument_list [i] = instr [i];
 		chan = instr2chan (i);
 		if (chan != 9) {
 			// non-drum instruments will get program change
 			buffer [0] = MIDI_PC | chan;
-			buffer [1] = instr [i];
+			buffer [1] = instrument_list [i];
 			buffer [2] = 0;
 
 			push_to_list (OUT, buffer);			// put in midi send buffer to assign instruments to midi channels
@@ -367,13 +366,24 @@ void init_instruments () {
 }
 
 
-// init volume to each midi channel
-void init_volumes (uint8_t vol) {
+// set a midi instrument to each channel by sending midi commands
+// midi send is optimized (no midi command sent if no change in instruments)
+void set_instruments (uint8_t *instr) {
 
-	uint8_t buffer [4];
 	int i;
 	
-	for (i = 0; i < 8; i++){
+	for (i = 0; i < 8; i++) set_instrument (i, instr [i]);
+}
+
+
+// set volume to one midi channel
+// midi send is optimized (no volume command sent if no change in instruments)
+void set_volume (int i, uint8_t vol) {
+
+	uint8_t buffer [4];
+
+	if (volume_list [i] != vol) {
+		volume_list [i] = vol;
 
 		buffer [0] = MIDI_CC | instr2chan (i);
 		buffer [1] = 0x07;					// 0x07 is Volume Control Change
@@ -381,6 +391,16 @@ void init_volumes (uint8_t vol) {
 
 		push_to_list (OUT, buffer);			// put in midi send buffer to assign volume to midi channels
 	}
+}
+
+
+// init volume to each midi channel
+// midi send is optimized (no volume command sent if no change in instruments)
+void set_volumes (uint8_t *vol) {
+
+	int i;
+	
+	for (i = 0; i < 8; i++) set_volume (i, vol [i]);
 }
 
 

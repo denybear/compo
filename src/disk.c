@@ -23,11 +23,11 @@ int load (uint8_t name, char * directory) {
 	FILE *fp;
 	int i;
 	char filename [100];		// temp structure for file name
-	uint8_t instr [8];			// (drum), piano, elec piano, hammond organ, fingered bass, clean guitar, string ensemble, brass ensemble
 	char buffer [50000];		// buffer containing json data
 	int len;
 	cJSON *json;				// used for CJSON writing
 	cJSON *instruments = NULL;
+	cJSON *volumes = NULL;
 	cJSON *notes = NULL;
 	cJSON *note = NULL;
 	cJSON *data = NULL;			// temp data
@@ -63,9 +63,17 @@ int load (uint8_t name, char * directory) {
 	// instruments; first instrument does not count (drum channel)
     instruments = cJSON_GetObjectItemCaseSensitive(json, "instruments");
 	for (i = 0; i < 8; i++) {
-		instrument = cJSON_GetArrayItem(instruments, i);
-		if (instrument == NULL) goto end;
-		instr [i] = instrument->valueint;
+		data = cJSON_GetArrayItem(instruments, i);
+		if (data == NULL) goto end;
+		instrument_list [i] = data->valueint;
+	}
+
+	// volumes; first instrument does not count (drum channel)
+    volumes = cJSON_GetObjectItemCaseSensitive(json, "volumes");
+	for (i = 0; i < 8; i++) {
+		data = cJSON_GetArrayItem(volumes, i);
+		if (data == NULL) goto end;
+		volume_list [i] = data->valueint;
 	}
 
 	// tempo values
@@ -169,9 +177,9 @@ int save (uint8_t name, char * directory) {
 	FILE *fp;
 	int i;
 	char filename [100];		// temp structure for file name
-	const uint8_t instr [8] = {0, 0, 2, 16, 33, 27, 48, 61};		// (drum), piano, elec piano, hammond organ, fingered bass, clean guitar, string ensemble, brass ensemble
 	cJSON *json;				// used for CJSON writing
 	cJSON *instruments = NULL;
+	cJSON *volumes = NULL;
 	cJSON *notes = NULL;
 	cJSON *note = NULL;
 	char *json_str;				// string where json is stored
@@ -182,9 +190,14 @@ int save (uint8_t name, char * directory) {
 	json = cJSON_CreateObject(); 
 
 	// instruments; first instrument does not count (drum channel)
-	instruments = cJSON_CreateIntArray (instr, 8);
+	instruments = cJSON_CreateIntArray (instrument_list, 8);
 	if (instruments == NULL) goto end;
 	if (cJSON_AddItemToObject(json, "instruments", instruments) == NULL) goto end;
+
+	// volumes
+	volumes = cJSON_CreateIntArray (volume_list, 8);
+	if (volumes == NULL) goto end;
+	if (cJSON_AddItemToObject(json, "volumes", volumes) == NULL) goto end;
 
 	// tempo values
 	if (cJSON_AddNumberToObject(json, "beats_per_bar", time_beats_per_bar) == NULL) goto end;
@@ -247,17 +260,20 @@ end:
 	return status;
 }
 
-
-int save_to_midi (uint8_t name, char * directory) {
+// export to midi
+// if quant is FALSE, then timing values are non-quantized; else, they are quantized
+int save_to_midi (uint8_t name, char * directory, int quant) {
 	
 	FILE *out;
 	int32_t trackSize = 0;
 	uint8_t trackByte[4] = {0};
-	int	PPQN;
+	int	chan, int vel;
 	int i;
+	uint32_t previous_tick, tick, delta;
 
 	// create file path
-	sprintf (filename, "%s/%02x.mid", directory, number);
+	if (quant==FALSE) sprintf (filename, "%s/%02x.mid", directory, number);
+	else sprintf (filename, "%s/%02xq.mid", directory, number);
 
 	// create file in write mode
 	out = fopen (filename, "wb");
@@ -266,41 +282,62 @@ int save_to_midi (uint8_t name, char * directory) {
 		return 2;
 	}
 
-	// set ppqn
-	PPQN = (int) ticks_per_beat;
-
 	// write header
-	WriteMidiHeader(PPQN, out);
+	WriteMidiHeader((int) ticks_per_beat, out);				// PPQN
 	WriteTrackHeader(out);
 	for(int i=0; i<4; i++) {
-		fwrite(trackByte+i, sizeof(uint8_t), 1, out);		// dummy track size (all 0) for now
+		fwrite(trackByte+i, sizeof(uint8_t), 1, out);		// write dummy track size (all 0) for now
 	}
 
-//****HERE
-	
 	trackSize += WriteTrackName(out);
-	trackSize += WriteSysEx_GS_Reset(out);
-	trackSize += WriteControlChange(0, 9, 7, 100, out);
-	trackSize += WriteControlChange(0, 9, 0, 0, out);
-	trackSize += WriteControlChange(0, 9, 32, 0, out);
-	trackSize += WriteProgramChange(0, 9, 80, out);
-	trackSize += WriteTempo(0, 120, out);
-	
-	int offset = 0;
-	bool add = true;
-	srand(time(NULL));
-	for(int i=0; i<256; i++) {
-		offset = rand()%25;
-		trackSize += WriteNote(0, 9, 35+offset, 100, out);
-		
-		trackSize += WriteNote(PPQN/4, 9, 35+offset, 0, out);
-		
-		/*
-		if(offset == 16) add = false;
-		else if(offset == 0) add = true;
-		offset += (add) ? 1 : -1;
-		*/
+	// trackSize += WriteSysEx_GS_Reset(out);						// use instruments above 127 (above GM)
+	// trackSize += WriteControlChange(0, 9, 0, 0, out);			// MSB - LSB of instrument
+	// trackSize += WriteControlChange(0, 9, 32, 0, out);
+
+	// set tempo
+	trackSize += WriteTempo(0, (int) time_beats_per_minute, out);
+
+	//set instruments for each channel
+	for (i = 0; i < 8; i++) {
+		chan = instr2chan (i);
+		if (chan != 9) {
+			// non-drum instruments will get program change
+			trackSize += WriteProgramChange(0, chan, instrument_list [i], out);			// instrument change
+		}
 	}
+
+	//set volumes for each channel
+	for (i = 0; i < 8; i++) {
+		chan = instr2chan (i);
+		trackSize += WritecontrolChange(0, chan, 0x07, volume_list [i], out);			// instrument change
+	}
+
+	// write notes of the song
+	previous_tick = 0;	// first event happens at timing 0
+	for (i = 0; i < song_length; i++) {
+	
+		// determine velocity depending on note-on or note-off
+		if (song [i].status == MIDI_NOTEON) vel = song [i].vel;
+		else vel = 0;			// note-off can be defined as note-on with 0 velocity
+
+		// determine channel
+		chan = instr2chan (song [i].instrument);
+
+		// determine delta time between midi event and previous midi event
+		// we use quant parameter to determine whether we should use quantized values or not
+		note2tick (song [i], &tick, quant);			// number of ticks from BBT (0,0,0)
+		if (previous_tick > tick) {
+			printf ("Error in generating MIDI file : negative delta time\n");		// error message in case delta time is negative
+			tick = previous_tick;													// set delta time to 0 in this case
+		}
+		delta = tick - previous_tick;				// compute delta time between 2 events; in theory, delta should always be > 0 as note events are sorted by time
+		previous_tick = tick;
+
+		// write note
+		trackSize += WriteNote(delta, chan, song [i].key, vel, out);
+	}
+
+	// write track end
 	trackSize += WriteTrackEnd(out);
 
 	// write final track size

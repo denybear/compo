@@ -74,3 +74,7 @@ jack_nframes_t tap1, tap2;				// used to calculate tap tempo
 
 // to manage 000 key issue (which returns C3A0C3A0C3A0)
 int color_repeat = 0;
+
+// list of midi instrument per channel, volume per channel
+uint8_t instrument_list [8];
+uint8_t volume_list [8];
