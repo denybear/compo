@@ -11,15 +11,15 @@ uint8_t instr2chan (uint8_t);
 int push_to_list (int, uint8_t *);
 int pull_from_list (int, uint8_t *);
 int midi_write (void *, jack_nframes_t, jack_midi_data_t *);
-void compute_bbt (jack_nframes_t, jack_position_t *, int);
+int compute_bbt (jack_nframes_t, jack_position_t *, int);
 uint32_t quantize (uint32_t, int);
-void quantize_song (int, int);
+void quantize_song (int);
 void note2tick (note_t, uint32_t *, int);
 void tick2note (uint32_t, note_t *, int);
-void set_instrument (int, uint8_t);
-void set_instruments (uint8_t *);
-void set_volume (int, uint8_t);
-void set_volumes (uint8_t *);
+void set_instrument (int, int);
+void set_instruments (int *);
+void set_volume (int, int);
+void set_volumes (int *);
 int should_play (int);
 
 

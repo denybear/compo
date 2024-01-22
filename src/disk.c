@@ -33,10 +33,10 @@ int load (uint8_t name, char * directory) {
 	cJSON *data = NULL;			// temp data
 	char *json_str;				// string where json is stored
 	int status = 0;
-	char *error_ptr;
+	const char *error_ptr;
 
 	// create file path
-	sprintf (filename, "%s/%02x", directory, number);
+	sprintf (filename, "%s/%02x", directory, name);
 
 	// create file in write mode
 	fp = fopen (filename, "rt");
@@ -116,43 +116,43 @@ int load (uint8_t name, char * directory) {
 
 		data = cJSON_GetObjectItemCaseSensitive (note, "status");
 		if (data == NULL) goto end;
-		song [i].instrument = data->status;
+		song [i].status = data->valueint;
 
 		data = cJSON_GetObjectItemCaseSensitive (note, "key");
 		if (data == NULL) goto end;
-		song [i].instrument = data->key;
+		song [i].key = data->valueint;
 
 		data = cJSON_GetObjectItemCaseSensitive (note, "velocity");
 		if (data == NULL) goto end;
-		song [i].instrument = data->vel;
+		song [i].vel = data->valueint;
 
 		data = cJSON_GetObjectItemCaseSensitive (note, "color");
 		if (data == NULL) goto end;
-		song [i].instrument = data->color;
+		song [i].color = data->valueint;
 
 		data = cJSON_GetObjectItemCaseSensitive (note, "bar");
 		if (data == NULL) goto end;
-		song [i].instrument = data->bar;
-
-		data = cJSON_GetObjectItemCaseSensitive (note, "qbar");
-		if (data == NULL) goto end;
-		song [i].instrument = data->qbar;
+		song [i].bar = data->valueint;
 
 		data = cJSON_GetObjectItemCaseSensitive (note, "beat");
 		if (data == NULL) goto end;
-		song [i].instrument = data->beat;
-
-		data = cJSON_GetObjectItemCaseSensitive (note, "qbeat");
-		if (data == NULL) goto end;
-		song [i].instrument = data->qbeat;
+		song [i].beat = data->valueint;
 
 		data = cJSON_GetObjectItemCaseSensitive (note, "tick");
 		if (data == NULL) goto end;
-		song [i].instrument = data->tick;
+		song [i].tick = data->valueint;
+
+		data = cJSON_GetObjectItemCaseSensitive (note, "qbar");
+		if (data == NULL) goto end;
+		song [i].qbar = data->valueint;
+
+		data = cJSON_GetObjectItemCaseSensitive (note, "qbeat");
+		if (data == NULL) goto end;
+		song [i].qbeat = data->valueint;
 
 		data = cJSON_GetObjectItemCaseSensitive (note, "qtick");
 		if (data == NULL) goto end;
-		song [i].instrument = data->qtick;
+		song [i].qtick = data->valueint;
 
 		i++;
 	}
@@ -190,14 +190,14 @@ int save (uint8_t name, char * directory) {
 	json = cJSON_CreateObject(); 
 
 	// instruments; first instrument does not count (drum channel)
-	instruments = cJSON_CreateIntArray (instrument_list, 8);
+	instruments = cJSON_CreateIntArray ((const int *)instrument_list, 8);
 	if (instruments == NULL) goto end;
-	if (cJSON_AddItemToObject(json, "instruments", instruments) == NULL) goto end;
+	if (cJSON_AddItemToObject(json, "instruments", instruments) == FALSE) goto end;
 
 	// volumes
-	volumes = cJSON_CreateIntArray (volume_list, 8);
+	volumes = cJSON_CreateIntArray ((const int *)volume_list, 8);
 	if (volumes == NULL) goto end;
-	if (cJSON_AddItemToObject(json, "volumes", volumes) == NULL) goto end;
+	if (cJSON_AddItemToObject(json, "volumes", volumes) == FALSE) goto end;
 
 	// tempo values
 	if (cJSON_AddNumberToObject(json, "beats_per_bar", time_beats_per_bar) == NULL) goto end;
@@ -224,10 +224,10 @@ int save (uint8_t name, char * directory) {
 		if (cJSON_AddNumberToObject(note, "velocity", song [i].vel) == NULL) goto end;
 		if (cJSON_AddNumberToObject(note, "color", song [i].color) == NULL) goto end;
 		if (cJSON_AddNumberToObject(note, "bar", song [i].bar) == NULL) goto end;
-		if (cJSON_AddNumberToObject(note, "qbar", song [i].qbar) == NULL) goto end;
 		if (cJSON_AddNumberToObject(note, "beat", song [i].beat) == NULL) goto end;
-		if (cJSON_AddNumberToObject(note, "qbeat", song [i].qbeat) == NULL) goto end;
 		if (cJSON_AddNumberToObject(note, "tick", song [i].tick) == NULL) goto end;
+		if (cJSON_AddNumberToObject(note, "qbar", song [i].qbar) == NULL) goto end;
+		if (cJSON_AddNumberToObject(note, "qbeat", song [i].qbeat) == NULL) goto end;
 		if (cJSON_AddNumberToObject(note, "qtick", song [i].qtick) == NULL) goto end;
 		cJSON_AddItemToArray(notes, note);
     }
@@ -236,7 +236,7 @@ int save (uint8_t name, char * directory) {
 	json_str = cJSON_Print(json); 
 
 	// create file path
-	sprintf (filename, "%s/%02x", directory, number);
+	sprintf (filename, "%s/%02x", directory, name);
 
 	// create file in write mode
 	fp = fopen (filename, "wt");
@@ -265,15 +265,16 @@ end:
 int save_to_midi (uint8_t name, char * directory, int quant) {
 	
 	FILE *out;
+	char filename [100];		// temp structure for file name
 	int32_t trackSize = 0;
 	uint8_t trackByte[4] = {0};
-	int	chan, int vel;
+	int	chan, vel;
 	int i;
 	uint32_t previous_tick, tick, delta;
 
 	// create file path
-	if (quant==FALSE) sprintf (filename, "%s/%02x.mid", directory, number);
-	else sprintf (filename, "%s/%02xq.mid", directory, number);
+	if (quant==FALSE) sprintf (filename, "%s/%02x.mid", directory, name);
+	else sprintf (filename, "%s/%02xq.mid", directory, name);
 
 	// create file in write mode
 	out = fopen (filename, "wb");
@@ -283,7 +284,7 @@ int save_to_midi (uint8_t name, char * directory, int quant) {
 	}
 
 	// write header
-	WriteMidiHeader((int) ticks_per_beat, out);				// PPQN
+	WriteMidiHeader((int) time_ticks_per_beat, out);				// PPQN
 	WriteTrackHeader(out);
 	for(int i=0; i<4; i++) {
 		fwrite(trackByte+i, sizeof(uint8_t), 1, out);		// write dummy track size (all 0) for now
@@ -309,7 +310,7 @@ int save_to_midi (uint8_t name, char * directory, int quant) {
 	//set volumes for each channel
 	for (i = 0; i < 8; i++) {
 		chan = instr2chan (i);
-		trackSize += WritecontrolChange(0, chan, 0x07, volume_list [i], out);			// instrument change
+		trackSize += WriteControlChange(0, chan, 0x07, volume_list [i], out);			// instrument change
 	}
 
 	// write notes of the song

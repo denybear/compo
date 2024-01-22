@@ -21,6 +21,7 @@ extern jack_position_t previous_time_position;	// structure that contains BBT fo
 extern jack_port_t *midi_UI_in, *midi_UI_out;
 extern jack_port_t *midi_KBD_in, *midi_KBD_out;
 extern jack_port_t *midi_out;
+extern jack_port_t *clock_out;
 
 // define JACKD client : this is this program
 extern jack_client_t *client;
@@ -40,6 +41,9 @@ extern uint8_t kbd_list [][3];		// midi out buffer for KBD
 extern int kbd_list_index;			// index in the list
 extern uint8_t out_list [] [3];		// midi out buffer for OUT (to fluidsynth)
 extern int out_list_index;			// index in the list
+extern uint8_t clk_list [] [3];		// clock out buffer for CLK (to external system)
+extern int clk_list_index;			// index in the list
+
 
 // select functionality
 extern int ui_limit1;
@@ -62,6 +66,8 @@ extern note_t metronome [16];			// metronome: 4 note-on, 4 note-off on 2 bars
 extern int is_play;						// play is in progress
 extern int is_record;					// record is in progress
 extern int is_metronome;				// metronome is in progress
+extern int is_save;
+extern int is_load;
 
 // quantization variables
 extern int quantizer;						// contains value used for quantization
@@ -73,5 +79,8 @@ extern jack_nframes_t tap1, tap2;			// used to calculate tap tempo
 extern int color_repeat;
 
 // list of midi instrument per channel, volume per channel
-extern uint8_t instrument_list [8];
-extern uint8_t volume_list [8];
+extern int instrument_list [8];
+extern int volume_list [8];
+
+// determine if external clock tick shall be sent or not
+extern int send_clock_tick;					// determine if midi clock shall be sent or not

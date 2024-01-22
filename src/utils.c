@@ -63,6 +63,10 @@ int push_to_list (int device, uint8_t * buffer) {
 			index = &out_list_index;
 			list = &out_list[0][0];
 			break;
+		case CLK:
+			index = &clk_list_index;
+			list = &clk_list[0][0];
+			break;
 	}
 
 	for (i = 0; i < 3; i++) {
@@ -72,19 +76,6 @@ int push_to_list (int device, uint8_t * buffer) {
 	// increment index and check boundaries
 	if (*index >= (LIST_ELT-1)) *index = 0;
 	else (*index)++;
-
-/*
-	// check to which list we should add
-	if (device == UI) {
-		for (i = 0; i < 3; i++) {
-			// add to the list
-			ui_list [ui_list_index] [i] = buffer [i];
-		}
-		// increment index and check boundaries
-		if (ui_list_index >= (LIST_ELT-1)) ui_list_index = 0;
-		else ui_list_index++;
-	}
-*/
 }
 
 
@@ -107,6 +98,10 @@ int pull_from_list (int device, uint8_t * buffer) {
 		case OUT:
 			index = &out_list_index;
 			list = &out_list[0][0];
+			break;
+		case CLK:
+			index = &clk_list_index;
+			list = &clk_list[0][0];
 			break;
 	}
 
@@ -142,6 +137,7 @@ int midi_write (void *port_buffer, jack_nframes_t time, jack_midi_data_t *buffer
 				break;
 			case MIDI_1BYTE:
 				lg = 1;
+				break;
 			default:
 				lg = 3;
 				break;
@@ -159,11 +155,12 @@ int midi_write (void *port_buffer, jack_nframes_t time, jack_midi_data_t *buffer
 // 0 : compute BBT based on previous values of BBT & fram rate
 // 1 : compute BBT, and sets position as ui_current_bar, 0, 0
 // requires jack_position_t * which will contain the BBT information
-void compute_bbt (jack_nframes_t nframes, jack_position_t *pos, int new_pos)
+// returns TRUE if a clock signal shall be sent, FALSE otherwise
+int compute_bbt (jack_nframes_t nframes, jack_position_t *pos, int new_pos)
 {
 	double ticks_per_bar;		// number of ticks per bar
 	uint32_t start_bar;
-
+	static int clock_tick, previous_clock_tick;		// number of ticks for midi clock (from 0-23 for quarter note, 0-95 per bar)
 	if (new_pos) {
 
 		pos->frame_rate = jack_get_sample_rate(client);			// set frame rate (sample rate) to the BBT structure
@@ -179,6 +176,11 @@ void compute_bbt (jack_nframes_t nframes, jack_position_t *pos, int new_pos)
 		pos->beat = 0;
 		pos->tick = 0;
 		pos->bar_start_tick = 0.0;
+
+		// for sending midi clock
+		clock_tick = 0;
+		previous_clock_tick = -1;
+		return (FALSE);					// clock signal will be sent at next call
 	}
 	else {
 
@@ -195,6 +197,12 @@ void compute_bbt (jack_nframes_t nframes, jack_position_t *pos, int new_pos)
 		pos->bar = pos->padding [0] + ((int) pos->bar_start_tick / (int) ticks_per_bar);		// bar number
 		// check bar boundaries; go to bar 0 if we reach last bar
 		if (pos->bar >= 512) pos->bar = pos->bar % 512;		// 512 = 64 bar * 8 pages; we loop after 512 bars
+
+		// determine if clock signal shall be sent
+		clock_tick = (int) ((pos->tick * 24) / (int) ticks_per_bar);		// 24 ticks per quarter note
+		if (clock_tick == previous_clock_tick) return (FALSE);
+		previous_clock_tick = clock_tick;
+		return (TRUE);
 	}
 }
 
@@ -222,14 +230,13 @@ uint32_t quantize (uint32_t tick, int quant) {
 
 // go through the whole song and quantize the notes; notes-on are quantized according to quant_noteon parameter
 // duration between notes-on and notes-off are quantized according to quant_noteoff parameter
-void quantize_song (int quant_noteon, int quant_noteoff) {
+void quantize_song (int quant_noteon) {
 
-	int i,j;
+	int i;
 	note_t note;						// temp structure to store BBT info
 	uint32_t tick_on, qtick_on;			// temp structure to store tick info
 	uint32_t tick_off, qtick_off;		// temp structure to store tick info
 	int tick_difference, qtick_difference;
-	uint8_t first_note_on [8];			// TRUE if first note-on found in the song, false otherwise; 1 variable per instrument
 
 	// how quantization is done:
 	// first note of song is quantized according its absolute timing in the song
@@ -237,9 +244,6 @@ void quantize_song (int quant_noteon, int quant_noteoff) {
 	// (said differently, time difference between the 2 consecutive notes is quantized with quant_noteon value)
 	// a processing is done for note-off, to make sure a new bar never starts with note-off (useful for copy-paste). This consist in decrementing quantized value for note-offs
 
-	memset (first_note_on, TRUE, 8);	// set first_note_on to TRUE
-
-/* simplified quantization here */
 	if (song_length == 0) return;		// make sure song exists
 	
 	// quantize first note found
@@ -264,105 +268,23 @@ void quantize_song (int quant_noteon, int quant_noteoff) {
 		}
 
 		qtick_difference = quantize (tick_difference, quant_noteon);	// quantized time difference between the 2 notes-on
-		qtick_difference += qtick_on;						// add to quantized BBT of previous note, and store to quantized BBT of current note
+		qtick_off = qtick_difference + qtick_on;						// add to quantized BBT of previous note, and store to quantized BBT of current note
+
+//printf ("tickon:%d, qtickon:%d, tickoff:%d tickdiff:%d, qtickdiff:%d, qtickoff:%d\n", tick_on, qtick_on, tick_off, tick_difference, qtick_difference, qtick_off);
 
 		// adjust quantized timing depending on whether we have notes on or notes off
 		// to make sure any note off is at the end of a beat
 		if (qtick_on == 0) {		// specific case if qtick_on is 0; as previous notes are all aligned on 0, whether previous note is note-off or note-on
-			if (song [i].status == MIDI_NOTEOFF) qtick_difference--;
+			if (song [i].status == MIDI_NOTEOFF) qtick_off--;
 		}
 		else {
-			if ((song [(i-1)].status == MIDI_NOTEOFF) && (song [i].status == MIDI_NOTEON)) qtick_difference++;
-			if ((song [(i-1)].status == MIDI_NOTEON) && (song [i].status == MIDI_NOTEOFF)) qtick_difference--;
+			if ((song [(i-1)].status == MIDI_NOTEOFF) && (song [i].status == MIDI_NOTEON)) qtick_off++;
+			if ((song [(i-1)].status == MIDI_NOTEON) && (song [i].status == MIDI_NOTEOFF)) qtick_off--;
 		}
 		
 
-		tick2note (qtick_difference, &song [i], TRUE);		// store to quantized BBT of current note
+		tick2note (qtick_off, &song [i], TRUE);		// store to quantized BBT of current note
 	}	
-
-
-/* complex quantization	
-
-	// how quantization is done:
-	// each first note-on of an instrument is quantized according its absolute timing in the song
-	// each next note-on of an instrument is quantized according its relative timing compared to previous note-on of the same instrument
-	// (said differently, time difference between the 2 consecutive notes-on of an instrument is quantized with quant_noteon value) 
-	// each note-off of an instrument is quantized according its relative timing compared to previous note-on of the same instrument and same key
-	// (said differently, time difference between note-on and note-off of an instrument and a key is quantized with quant_noteoff value) 
-
-
-	for (i = 0; i < song_length; i ++) {
-		if (song [i].status == MIDI_NOTEON) {
-			// note on found! First, quantize note on
-
-			if (first_note_on [song[i].instrument]) {
-				// found the first note-on of the song for an instrument. We quantize it
-				note2tick (song [i], &tick_on, FALSE);			// number of ticks from BBT (0,0,0)
-				qtick_on = quantize (tick_on, quant_noteon);	// quantized number of ticks
-				tick2note (qtick_on, &song [i], TRUE);			// store to qBBT of the song's note
-				first_note_on [song[i].instrument] = FALSE;
-			}
-
-			// let's find the next note-on for the same instrument; time difference between the 2 note-on shall be quantized
-			for (j = (i + 1); j < song_length; j++) {
-				if ((song [j].status == MIDI_NOTEON) && (song [j].instrument == song [i].instrument)) {
-					// we found next note on with the same instrument as previous note on
-					// determine number of ticks between the 2 note-on
-					note2tick (song [j], &tick_off, FALSE);			// number of ticks from BBT (0,0,0)
-					tick_difference = tick_off - tick_on;
-					if (tick_difference < 0) {
-						// negative time difference; this should never happen
-						printf ("Quantization ERROR - negative time difference between 2 notes-on\n");
-						// printf ("note on: index:%d note:%02x bar:%d tick:%d, tick-on:%d, qbar:%d qtick:%d, qtick-on:%d\n", i, song[i].key, song[i].bar, song[i].tick, tick_on, song[i].qbar, song[i].qtick, qtick_on);
-						// printf ("note off: index:%d note:%02x bar:%d tick:%d, tick_off:%d qbar:%d qtick:%d\n", j, song[j].key, song[j].bar, song[j].tick, tick_off, song[j].qbar, song[j].qtick);
-						tick_difference = 0;
-					}
-					qtick_difference = quantize (tick_difference, quant_noteon);	// quantized time difference between the 2 notes-on
-					tick2note ((qtick_difference + qtick_on), &song [j], TRUE);		// add to quantized BBT of note_on, and store to quantized BBT of next note_on
-					break;		// end the loop as we found note-on
-				}
-			}
-
-			// let's find the first note off with the same key and instrument; it should be after note-on
-			for (j = i; j < song_length; j++) {
-				if ((song [j].status == MIDI_NOTEOFF) && (song [j].instrument == song [i].instrument) && (song [j].key == song [i].key)) {
-					// we found note off corresponding to note on
-					// determine number of ticks between note on and note off
-					note2tick (song [j], &tick_off, FALSE);			// number of ticks from BBT (0,0,0)
-					tick_difference = tick_off - tick_on;
-					if (tick_difference <= 0) {
-						// negative or null time difference; this should never happen
-						printf ("Quantization ERROR - negative time difference between note-on and note-off\n");
-						// printf ("note on: index:%d note:%02x bar:%d tick:%d, tick-on:%d, qbar:%d qtick:%d, qtick-on:%d\n", i, song[i].key, song[i].bar, song[i].tick, tick_on, song[i].qbar, song[i].qtick, qtick_on);
-						// printf ("note off: index:%d note:%02x bar:%d tick:%d, tick_off:%d qbar:%d qtick:%d\n", j, song[j].key, song[j].bar, song[j].tick, tick_off, song[j].qbar, song[j].qtick);
-						tick_difference = 0;
-					}
-					qtick_difference = quantize (tick_difference, quant_noteoff);	// quantized time difference between note_on & note_off
-					if (qtick_difference == 0) {
-						// null quantized time difference; this can happen when note-on and note-off are very close
-						// printf ("Quantization ERROR - null quantized time difference\n");
-						// printf ("tick_difference:%d, qtick_difference:%d", tick_difference, qtick_difference);
-						// printf ("note on: index:%d note:%02x bar:%d tick:%d, tick-on:%d, qbar:%d qtick:%d, qtick-on:%d\n", i, song[i].key, song[i].bar, song[i].tick, tick_on, song[i].qbar, song[i].qtick, qtick_on);
-						// printf ("note off: index:%d note:%02x bar:%d tick:%d, tick_off:%d qbar:%d qtick:%d\n", j, song[j].key, song[j].bar, song[j].tick, tick_off, song[j].qbar, song[j].qtick);
-						qtick_difference = (uint32_t) (time_ticks_per_beat / THIRTY_SECOND);		// set to 32th note
-					}
-					qtick_difference --;		// decrement so note_off is at the end of a beat; not to start of a beat
-					tick2note ((qtick_difference + qtick_on), &song [j], TRUE);		// add to quantized BBT of note_on, and store to quantized BBT of note_off
-					break;		// end the loop as we found note-off
-				}
-			}
-			// check if we did not find note off corresponding to note on
-			if (j == song_length) {
-					printf ("Quantization ERROR - no note-off detected for a note-on\n");
-			}
-		}
-		else {
-			// note-off and other midi events; we don't quantize these
-			// note-off should be quantized as part of note-on process
-			// don't do anything
-		}
-	}
-*/
 }
 
 
@@ -399,7 +321,7 @@ void tick2note (uint32_t tick, note_t *note, int quantized) {
 // set a midi instrument to one channel by sending midi commands
 // midi send is optimized (no midi command sent if no change in instruments)
 // https://www.recordingblogs.com/wiki/midi-program-change-message
-void set_instrument (int i, uint8_t instr) {
+void set_instrument (int i, int instr) {
 
 	uint8_t buffer [4], chan;
 	
@@ -420,7 +342,7 @@ void set_instrument (int i, uint8_t instr) {
 
 // set a midi instrument to each channel by sending midi commands
 // midi send is optimized (no midi command sent if no change in instruments)
-void set_instruments (uint8_t *instr) {
+void set_instruments (int *instr) {
 
 	int i;
 	
@@ -430,7 +352,7 @@ void set_instruments (uint8_t *instr) {
 
 // set volume to one midi channel
 // midi send is optimized (no volume command sent if no change in instruments)
-void set_volume (int i, uint8_t vol) {
+void set_volume (int i, int vol) {
 
 	uint8_t buffer [4];
 
@@ -448,7 +370,7 @@ void set_volume (int i, uint8_t vol) {
 
 // init volume to each midi channel
 // midi send is optimized (no volume command sent if no change in instruments)
-void set_volumes (uint8_t *vol) {
+void set_volumes (int *vol) {
 
 	int i;
 	

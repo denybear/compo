@@ -29,9 +29,11 @@ static void init_globals ( )
 	ui_list_index = 0;
 	kbd_list_index = 0;
 	out_list_index = 0;
+	clk_list_index = 0;
 	memset (ui_list, 0, LIST_ELT * 3);
 	memset (kbd_list, 0, LIST_ELT * 3);
 	memset (out_list, 0, LIST_ELT * 3);
+	memset (clk_list, 0, LIST_ELT * 3);
 	// empty song structure
 	memset (song, 0, SONG_SIZE * sizeof (note_t));
 	// empty copy_buffer structure and corresponding led structure
@@ -71,6 +73,12 @@ static void init_globals ( )
 	cbreak ();				// no buffering
 	keypad (stdscr, TRUE);	// special keys can be captured
 
+	// timing and tempo
+	time_beats_per_bar = 4.0;
+	time_beat_type = 4.0;
+	time_ticks_per_beat = 480.0;
+	time_beats_per_minute = 120.0;
+
 	// init quantization engine
 	quantizer = THIRTY_SECOND;
 
@@ -81,17 +89,18 @@ static void init_globals ( )
 	is_play = FALSE;
 	is_record = FALSE;
 	is_metronome = FALSE;
+	is_load = FALSE;
+	is_save = FALSE;
 	song_length = 0;		// indicates length of the song (highest index in song [])
 	copy_length = 0;		// length of copy buffer: empty
 	tap1 = 0;				// tap tempo
 	tap2 = 0;
 	color_repeat = 0;
 
-	// timing and tempo
-	time_beats_per_bar = 4.0;
-	time_beat_type = 4.0;
-	time_ticks_per_beat = 480.0;
-	time_beats_per_minute = 120.0;
+	// reset BBT position (nframes is not required at this stage); just required to start counting from 0
+	compute_bbt (0, &time_position, TRUE);
+	// copy BBT to previous position as well
+	memcpy (&previous_time_position, &time_position, sizeof (jack_position_t));
 }
 
 
@@ -121,6 +130,7 @@ void jack_shutdown ( void *arg )
 	free (midi_KBD_in);
 	free (midi_KBD_out);
 	free (midi_out);
+	free (clock_out);
 
 	exit ( 1 );
 }
@@ -233,6 +243,15 @@ int main ( int argc, char *argv[] )
 		exit ( 1 );
 	}
 
+	/* register clock-out port: this port will send the midi cloc events to external systems */
+	clock_out = jack_port_register (client, "clock_out", JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
+	if (clock_out == NULL ) {
+		fprintf ( stderr, "no more JACK CLOCK ports available.\n" );
+		// JACK client close
+		jack_client_close ( client );
+		exit ( 1 );
+	}
+
 	/* Tell the JACK server that we are ready to roll.  Our
 	 * process() callback will start running now. */
 
@@ -280,10 +299,10 @@ int main ( int argc, char *argv[] )
 
 
 	// assign midi instrument to each channel
-	const uint8_t default_instr [8] = {0, 0, 2, 16, 33, 27, 48, 61};		// (drum), piano, elec piano, hammond organ, fingered bass, clean guitar, string ensemble, brass ensemble
+	int default_instr [8] = {0, 0, 2, 16, 33, 27, 48, 61};		// (drum), piano, elec piano, hammond organ, fingered bass, clean guitar, string ensemble, brass ensemble
 	set_instruments (default_instr);
 	// set volume for each channel to 64 (mid-volume)
-	const uint8_t default_vol  [8] = {64, 64, 64, 64, 64, 64, 64, 64};		// volume per channel
+	int default_vol  [8] = {64, 64, 64, 64, 64, 64, 64, 64};		// volume per channel
 	set_volumes (default_vol);
 
 	// light leds on the UI
@@ -311,9 +330,11 @@ int main ( int argc, char *argv[] )
 	/* keep running until the transport stops */
 	while (1)
 	{
-		// check if user has loaded the LOAD button to load midi and SF2 file
-		//if (is_load) {
-		//}
+		// check if user has typed the SAVE button to save file
+		if (is_save) {
+			save (0, "/home/pi/");
+			is_save = FALSE;
+		}
 
 #ifdef WIN32
 		Sleep ( 1000 );

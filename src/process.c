@@ -29,14 +29,17 @@ int process ( jack_nframes_t nframes, void *arg )
 	double bpm;								// temp variable for tap tempo
 
 
+	/***************************/
+	/* Compute BBT & time base */
+	/***************************/
+	// compute BBT
+	send_clock_tick = compute_bbt (nframes, &time_position, FALSE);
 
 
-	/*************************************/
-	/* Step 0, compute BBT and play song */
-	/*************************************/
+	/*********************/
+	/* Step 0, play song */
+	/*********************/
 	if (is_play) {
-		// compute BBT
-		compute_bbt (nframes, &time_position, FALSE);
 
 		// read song to determine whether there are some notes to play; always read quantized value if available
 		notes_to_play = read_from_song (previous_time_position.bar, previous_time_position.tick, time_position.bar, time_position.tick, &lg, TRUE);
@@ -101,7 +104,6 @@ int process ( jack_nframes_t nframes, void *arg )
 		ui_current_bar = time_position.bar % 64;				// set ui current bar value between (0-63)
 		ui_limit1 = ui_current_bar;								// set selection as well (we are not in selection mode)
 		ui_limit2 = ui_current_bar;
-//		ui_current_bar = previous_time_position.bar % 64;		// set ui current bar value between (0-63)
 
 		// copy current BBT position to previous BBT position
 		memcpy (&previous_time_position, &time_position, sizeof (jack_position_t));
@@ -138,6 +140,29 @@ int process ( jack_nframes_t nframes, void *arg )
 
 	//go through the list of midi requests
 	while (pull_from_list (OUT, buffer)) {
+		// send midi stream
+		midi_write (midiout, 0, buffer);
+	}
+
+
+	/*******************************************************/
+	/* Second (bis), process CLOCK out events (midi clock) */
+	/*******************************************************/
+
+	// determine if clock shall be sent or not
+	if (send_clock_tick) {
+		buffer [0] = MIDI_CLOCK;
+		push_to_list (CLK, buffer);	// put in midisend buffer to change channel volume
+	}
+
+	// define midi out port to write to
+	midiout = jack_port_get_buffer (clock_out, nframes);
+
+	// clear midi write buffer
+	jack_midi_clear_buffer (midiout);
+
+	//go through the list of midi requests
+	while (pull_from_list (CLK, buffer)) {
 		// send midi stream
 		midi_write (midiout, 0, buffer);
 	}
@@ -209,13 +234,18 @@ int process ( jack_nframes_t nframes, void *arg )
 			// status variable
 			is_play = is_play ? FALSE : TRUE;
 			if (is_play) {		// we start playing: quantize song first
-if (ch=='p') quantize_song (FREE_TIMING, THIRTY_SECOND);
+if (ch=='p') quantize_song (FREE_TIMING);
 else
-				quantize_song (quantizer, THIRTY_SECOND);
-				// reset BBT position
+				quantize_song (quantizer);
+				// reset BBT position, but do not set clock_tick (it will be set at next call of process)
 				compute_bbt (nframes, &time_position, TRUE);
 				// copy BBT to previous position as well
 				memcpy (&previous_time_position, &time_position, sizeof (jack_position_t));
+
+				// send midi play
+				buffer [0] = MIDI_PLAY;
+				push_to_list (CLK, buffer);	// put in midisend buffer to change channel volume
+				// midi events will be sent during the next process call
 			}
 			else {
 				// send all notes off to all channels
@@ -227,6 +257,11 @@ else
 					push_to_list (OUT, buffer);
 					// midi events will be sent during the next process call
 				}
+
+				// send midi stop
+				buffer [0] = MIDI_STOP;
+				push_to_list (CLK, buffer);	// put in midisend buffer to change channel volume
+				// midi events will be sent during the next process call
 			}
 			break;
 		case NUM_DOT:	// RECORD
@@ -270,13 +305,16 @@ else
 			}
 			break;
 		case NUM_5:	// TEMPO -
-		case SNUM_5:
 			if (time_bpm_multiplier <= 0.1) break;		// if low boundary reached, do nothing
 			time_bpm_multiplier -= 0.1;
 			time_position.beats_per_minute = (int) (time_beats_per_minute * time_bpm_multiplier);
 			break;
-		case NUM_6:	// TEMPO +
+		case SNUM_5:	// RESET TEMPO
 		case SNUM_6:
+			time_bpm_multiplier = 1.0;
+			time_position.beats_per_minute = (int) (time_beats_per_minute * time_bpm_multiplier);
+			break;
+		case NUM_6:	// TEMPO +
 			if (time_bpm_multiplier >= 3.0) break;		// if high boundary reached, do nothing
 			time_bpm_multiplier += 0.1;
 			time_position.beats_per_minute = (int) (time_beats_per_minute * time_bpm_multiplier);
@@ -319,8 +357,10 @@ else
 			transpo_process (ui_current_instrument ,PLUS);
 			break;
 		case NUM_SLASH:	// LOAD
+			is_load = is_load ? FALSE : TRUE;
 			break;
 		case NUM_MINUS:	// SAVE
+			is_save = is_save ? FALSE : TRUE;
 			break;
 		case SNUM_SLASH:	// QUANTISATION
 			break;
@@ -345,37 +385,58 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 	buffer [1] = event->buffer [1];
 	buffer [2] = event->buffer [2];
 
-	// play the music straight
-	// get midi channel from instrument number, and assign it to midi command
-	buffer [0] = (buffer [0] & 0xF0) | (instr2chan (ui_current_instrument));
-	// play note only if note should be played (mute, solo, etc) or not note on
-	if (should_play (ui_current_instrument) || ((buffer [0] & 0xF0) != MIDI_NOTEON)) push_to_list (OUT, buffer);	// put in midisend buffer to play the note straight !
+	// assess event received from keyboard
+	switch (buffer [0] & 0xF0) {
+		case MIDI_NOTEOFF:
+		case MIDI_NOTEON:
+
+			// play the music straight
+			// get midi channel from instrument number, and assign it to midi command
+			buffer [0] = (buffer [0] & 0xF0) | (instr2chan (ui_current_instrument));
+			// play note only if note should be played (mute, solo, etc) or not note on
+			if (should_play (ui_current_instrument) || ((buffer [0] & 0xF0) != MIDI_NOTEON)) push_to_list (OUT, buffer);	// put in midisend buffer to play the note straight !
 
 
-	// in case recording is on
-	if (is_record && is_play) {
-		// fill-in note structure
-		note.instrument = ui_current_instrument;
-		note.bar = time_position.bar;
-		note.beat = time_position.beat;
-		note.tick = time_position.tick;
-		note.qbar = 0xFFFF;				// no quantization yet
-		note.qbeat = 0xFF;
-		note.qtick = 0xFFFF;
+			// in case recording is on
+			if (is_record && is_play) {
+				// fill-in note structure
+				note.instrument = ui_current_instrument;
+				note.bar = time_position.bar;
+				note.beat = time_position.beat;
+				note.tick = time_position.tick;
+				note.qbar = 0xFFFF;				// no quantization yet
+				note.qbeat = 0xFF;
+				note.qtick = 0xFFFF;
 
-		// write to song
-		note.status = buffer [0] & 0xF0;		// midi command only, no midi channel (it is set at play time)
-		note.key = buffer [1];
-		note.vel = buffer [2];
-		write_to_song (note);
+				// write to song
+				note.status = buffer [0] & 0xF0;		// midi command only, no midi channel (it is set at play time)
+				note.key = buffer [1];
+				note.vel = buffer [2];
+				write_to_song (note);
 
-		// we have recorded something in the bar : set bar to a color
-		if (ui_bars [ui_current_instrument][note.bar / 64][note.bar % 64] == BLACK) {
-			ui_bars [ui_current_instrument][note.bar / 64][note.bar % 64] = LO_YELLOW;
-		}
+				// we have recorded something in the bar : set bar to a color
+				if (ui_bars [ui_current_instrument][note.bar / 64][note.bar % 64] == BLACK) {
+					ui_bars [ui_current_instrument][note.bar / 64][note.bar % 64] = LO_YELLOW;
+				}
+			}
+			break;
 
-		// we don't do any UI yet as UI is done in the "play" section
+		case MIDI_CC:
+			// change volume for the channel
+			// onn MPC One, controllers go from 1 to 8, not from 0 to 7; we should decrement
+			buffer [1]--;
+			if (buffer [1] < 8) {
+				volume_list [buffer[1]] = buffer [2];	// set new volume
+
+				// get midi channel from instrument number, and assign it to midi command
+				buffer [0] = (buffer [0] & 0xF0) | (instr2chan (buffer [1]));
+				buffer [1] = 0x07;		// midi volume change
+				push_to_list (OUT, buffer);	// put in midisend buffer to change channel volume
+			}
+			break;
 	}
+
+	// we don't do any UI yet as UI is done in the "play" section
 }
 
 
