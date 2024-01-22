@@ -1,6 +1,6 @@
 /** @file utils.c
  *
- * @brief Contais all-purpose functions used by other parts of the program.
+ * @brief Contains all-purpose functions used by other parts of the program.
  *
  */
 
@@ -232,14 +232,65 @@ void quantize_song (int quant_noteon, int quant_noteoff) {
 	uint8_t first_note_on [8];			// TRUE if first note-on found in the song, false otherwise; 1 variable per instrument
 
 	// how quantization is done:
+	// first note of song is quantized according its absolute timing in the song
+	// each next note is quantized according its relative timing compared to previous note
+	// (said differently, time difference between the 2 consecutive notes is quantized with quant_noteon value)
+	// a processing is done for note-off, to make sure a new bar never starts with note-off (useful for copy-paste). This consist in decrementing quantized value for note-offs
+
+	memset (first_note_on, TRUE, 8);	// set first_note_on to TRUE
+
+/* simplified quantization here */
+	if (song_length == 0) return;		// make sure song exists
+	
+	// quantize first note found
+	note2tick (song [0], &tick_on, FALSE);			// number of ticks from BBT (0,0,0)
+	qtick_on = quantize (tick_on, quant_noteon);	// quantized number of ticks
+	if ((qtick_on != 0) && (song [0].status == MIDI_NOTEOFF)) qtick_on--;		// in case 1st note is note-off, then decrement so note_off is at the end of a beat; not to start of a beat
+	tick2note (qtick_on, &song [0], TRUE);			// store to qBBT of the song's note
+	
+	// quantize the rest of the song, based on time difference with the previous note
+	for (i = 1; i < song_length; i ++) {
+
+		// determine delta time between midi event and previous midi event
+		note2tick (song [(i-1)], &tick_on, FALSE);			// number of ticks from BBT (0,0,0)
+		note2tick (song [(i-1)], &qtick_on, TRUE);			// number of quantized ticks from BBT (0,0,0)
+		note2tick (song [i], &tick_off, FALSE);				// number of ticks from BBT (0,0,0)
+		tick_difference = tick_off - tick_on;
+
+		if (tick_difference < 0) {
+			// negative time difference; this should never happen
+			printf ("Quantization ERROR - negative time difference between 2 consecutive notes\n");
+			tick_difference = 0;
+		}
+
+		qtick_difference = quantize (tick_difference, quant_noteon);	// quantized time difference between the 2 notes-on
+		qtick_difference += qtick_on;						// add to quantized BBT of previous note, and store to quantized BBT of current note
+
+		// adjust quantized timing depending on whether we have notes on or notes off
+		// to make sure any note off is at the end of a beat
+		if (qtick_on == 0) {		// specific case if qtick_on is 0; as previous notes are all aligned on 0, whether previous note is note-off or note-on
+			if (song [i].status == MIDI_NOTEOFF) qtick_difference--;
+		}
+		else {
+			if ((song [(i-1)].status == MIDI_NOTEOFF) && (song [i].status == MIDI_NOTEON)) qtick_difference++;
+			if ((song [(i-1)].status == MIDI_NOTEON) && (song [i].status == MIDI_NOTEOFF)) qtick_difference--;
+		}
+		
+
+		tick2note (qtick_difference, &song [i], TRUE);		// store to quantized BBT of current note
+	}	
+
+
+/* complex quantization	
+
+	// how quantization is done:
 	// each first note-on of an instrument is quantized according its absolute timing in the song
 	// each next note-on of an instrument is quantized according its relative timing compared to previous note-on of the same instrument
 	// (said differently, time difference between the 2 consecutive notes-on of an instrument is quantized with quant_noteon value) 
 	// each note-off of an instrument is quantized according its relative timing compared to previous note-on of the same instrument and same key
 	// (said differently, time difference between note-on and note-off of an instrument and a key is quantized with quant_noteoff value) 
 
-	memset (first_note_on, TRUE, 8);	// set first_note_on to TRUE
-	
+
 	for (i = 0; i < song_length; i ++) {
 		if (song [i].status == MIDI_NOTEON) {
 			// note on found! First, quantize note on
@@ -311,6 +362,7 @@ void quantize_song (int quant_noteon, int quant_noteoff) {
 			// don't do anything
 		}
 	}
+*/
 }
 
 
@@ -351,8 +403,8 @@ void set_instrument (int i, uint8_t instr) {
 
 	uint8_t buffer [4], chan;
 	
-	if (instrument_list [i] != instr [i]) {
-		instrument_list [i] = instr [i];
+	if (instrument_list [i] != instr) {
+		instrument_list [i] = instr;
 		chan = instr2chan (i);
 		if (chan != 9) {
 			// non-drum instruments will get program change
