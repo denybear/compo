@@ -70,6 +70,8 @@ int is_record;						// record is in progress
 int is_metronome;					// metronome is in progress
 int is_save;
 int is_load;
+int is_quantization;				// quantization on/off (free timing)
+int is_velocity;					// velocity on/off (fixed)
 
 // quantization variables
 int quantizer;							// contains value used for quantization
@@ -86,4 +88,8 @@ int volume_list [8];
 
 // determine if external clock tick shall be sent or not
 int send_clock_tick;					// determine if midi clock shall be sent or not
+
+// tables for load/save
+uint8_t save_files [64];		// each save file is identified as a number; the table contains true or false depending file exists or not
+uint8_t file_selected;			// file number selected on the pad
 

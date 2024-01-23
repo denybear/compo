@@ -50,6 +50,8 @@ int process ( jack_nframes_t nframes, void *arg )
 			buffer [0] = (notes_to_play [i].status) | (instr2chan (notes_to_play [i].instrument));
 			buffer [1] = notes_to_play [i].key;
 			buffer [2] = notes_to_play [i].vel;
+			// adjust velocity in case of fixed velocity && note-on
+			if ((is_velocity) && ((buffer [0] & 0xF0) == MIDI_NOTEON)) buffer [2] = DEFAULT_VELOCITY;
 			// play note only if note should be played (mute, solo, etc) or not note on
 			if (should_play (notes_to_play [i].instrument) || ((buffer [0] & 0xF0) != MIDI_NOTEON)) push_to_list (OUT, buffer);	// put in midisend buffer to play the note straight !
 		}
@@ -230,42 +232,28 @@ int process ( jack_nframes_t nframes, void *arg )
 	switch (ch) {
 		case NUM_ENTER:	// PLAY
 		case SNUM_ENTER:
-		case 'p':
+			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
 			// status variable
 			is_play = is_play ? FALSE : TRUE;
-			if (is_play) {		// we start playing: quantize song first
-if (ch=='p') quantize_song (FREE_TIMING);
-else
-				quantize_song (quantizer);
-				// reset BBT position, but do not set clock_tick (it will be set at next call of process)
-				compute_bbt (nframes, &time_position, TRUE);
-				// copy BBT to previous position as well
-				memcpy (&previous_time_position, &time_position, sizeof (jack_position_t));
 
-				// send midi play
-				buffer [0] = MIDI_PLAY;
-				push_to_list (CLK, buffer);	// put in midisend buffer to change channel volume
-				// midi events will be sent during the next process call
-			}
-			else {
-				// send all notes off to all channels
-				for (i = 0; i < 8; i++) {
-					buffer [0] = MIDI_CC | instr2chan (i);
-					buffer [1] = MIDI_CC_MUTE;
-					buffer [2] = 0x00;
-					// send midi command out to play note
-					push_to_list (OUT, buffer);
-					// midi events will be sent during the next process call
-				}
+			if (is_play) start_playing ();
+			else stop_playing ();
+			break;
+		case NUM_3:	// VELOCITY ON/OFF
+			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
+			is_velocity = is_velocity ? FALSE : TRUE;
+			break;
+		case SNUM_3:	// QUANTIFY
+			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
+			is_quantization = is_quantization ? FALSE : TRUE;
 
-				// send midi stop
-				buffer [0] = MIDI_STOP;
-				push_to_list (CLK, buffer);	// put in midisend buffer to change channel volume
-				// midi events will be sent during the next process call
-			}
+			// toggle between quantization and no quantization
+			if (is_quantization) quantize_song (quantizer);
+			else quantize_song (FREE_TIMING);
 			break;
 		case NUM_DOT:	// RECORD
 		case SNUM_DOT:
+			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
 			// make sure no selection is in progress to enable record
 			// status variable
 			is_record = is_record ? FALSE : TRUE;
@@ -275,6 +263,7 @@ else
 			break;
 		case NUM_4:	// TAP TEMPO
 		case SNUM_4:
+			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
 			if (tap1 == 0) {
 				tap1 = jack_last_frame_time(client);
 				tap2 = 0;
@@ -304,67 +293,130 @@ else
 				}
 			}
 			break;
-		case NUM_5:	// TEMPO -
+		case SNUM_5:	// TEMPO -
+			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
 			if (time_bpm_multiplier <= 0.1) break;		// if low boundary reached, do nothing
 			time_bpm_multiplier -= 0.1;
 			time_position.beats_per_minute = (int) (time_beats_per_minute * time_bpm_multiplier);
 			break;
-		case SNUM_5:	// RESET TEMPO
-		case SNUM_6:
+		case NUM_5:	// RESET TEMPO
+		case NUM_6:
+			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
 			time_bpm_multiplier = 1.0;
 			time_position.beats_per_minute = (int) (time_beats_per_minute * time_bpm_multiplier);
 			break;
-		case NUM_6:	// TEMPO +
+		case SNUM_6:	// TEMPO +
+			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
 			if (time_bpm_multiplier >= 3.0) break;		// if high boundary reached, do nothing
 			time_bpm_multiplier += 0.1;
 			time_position.beats_per_minute = (int) (time_beats_per_minute * time_bpm_multiplier);
 			break;
 		case NUM_BACK:	// METRONOME ON/OFF
 		// case SNUM_BACK:
+			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
 			is_metronome = is_metronome ? FALSE : TRUE;
 			break;
 		case NUM_1:	// COPY
 		case SNUM_1:
+			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
 			bar_process (COPY);
 			break;
 		case NUM_2:	// CUT
 		case SNUM_2:
+			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
 			bar_process (CUT);
 			break;
 		case NUM_0:	// PASTE
 		case SNUM_0:
+			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
 			bar_process (PASTE);
 			break;
 		case NUM_000:	// COLOR
 		// case SNUM_000:
+			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
 			if ((color_repeat % 3) == 0) bar_process (COLOR);		// call color only 1 time out of 3
 			color_repeat++;
 			break;
 		case NUM_7:	// INSERT BARS
 		case SNUM_7:
+			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
 			bar_process (INSERT);
 			break;
 		case NUM_8:	// REMOVE BARS
 		case SNUM_8:
+			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
 			bar_process (REMOVE);
 			break;
 		case NUM_9:	// TRANSPO -
 		case SNUM_9:
+			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
 			transpo_process (ui_current_instrument, MINUS);
 			break;
 		case NUM_PLUS:	// TRANSPO +
 		case SNUM_PLUS:
+			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
 			transpo_process (ui_current_instrument ,PLUS);
 			break;
 		case NUM_SLASH:	// LOAD
+		case SNUM_SLASH:
 			is_load = is_load ? FALSE : TRUE;
+
+			if (is_load) {
+				is_play = FALSE;	// stop playing current song
+				stop_playing ();
+
+				is_save = FALSE;
+				file_selected = 0xFF;
+
+				// display screen with file names
+				led_ui_instruments (OFF);
+				led_ui_pages (OFF);
+				led_ui_files ();
+
+				// rest of loading is done in the main loop (outside process)
+				// then, once loaded, UI falls back to standard bar mode
+			}
+			else {
+				// here, the user has pressed load again without selecting a file; we should go back to previous song state
+				// light leds on the UI
+				led_ui_instruments (ON);
+				led_ui_pages (ON);
+				led_ui_bars (ui_current_instrument, ui_current_page);
+				// display between limit 1 and 2
+				ui_current_bar = led_ui_select (ui_limit1, ui_limit2);
+			}
 			break;
 		case NUM_MINUS:	// SAVE
+		case SNUM_MINUS:
 			is_save = is_save ? FALSE : TRUE;
+
+			if (is_save) {
+				is_play = FALSE;	// stop playing current song
+				stop_playing ();
+
+				is_load = FALSE;
+				file_selected = 0xFF;
+
+				// display screen with file names
+				led_ui_instruments (OFF);
+				led_ui_pages (OFF);
+				led_ui_files ();
+
+				// rest of loading is done in the main loop (outside process)
+				// then, once loaded, UI falls back to standard bar mode
+			}
+			else {
+				// here, the user has pressed save again without selecting a file; we should go back to previous song state
+				// light leds on the UI
+				led_ui_instruments (ON);
+				led_ui_pages (ON);
+				led_ui_bars (ui_current_instrument, ui_current_page);
+				// display between limit 1 and 2
+				ui_current_bar = led_ui_select (ui_limit1, ui_limit2);
+			}
 			break;
-		case SNUM_SLASH:	// QUANTISATION
-			break;
-		case SNUM_MINUS:	// VELOCITY
+		case NUM_STAR:	// INSTRUMENT
+		case SNUM_STAR:
 			break;
 		default:
 			break;
@@ -394,8 +446,13 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 			// get midi channel from instrument number, and assign it to midi command
 			buffer [0] = (buffer [0] & 0xF0) | (instr2chan (ui_current_instrument));
 			// play note only if note should be played (mute, solo, etc) or not note on
-			if (should_play (ui_current_instrument) || ((buffer [0] & 0xF0) != MIDI_NOTEON)) push_to_list (OUT, buffer);	// put in midisend buffer to play the note straight !
+			// means : we play notes off all the time, even if channel is muted 
+			if (should_play (ui_current_instrument) || ((buffer [0] & 0xF0) != MIDI_NOTEON)) {
 
+				// adjust velocity in case of fixed velocity && note-on
+				if ((is_velocity) && ((buffer [0] & 0xF0) == MIDI_NOTEON)) buffer [2] = DEFAULT_VELOCITY;
+				push_to_list (OUT, buffer);	// put in midisend buffer to play the note straight !
+			}
 
 			// in case recording is on
 			if (is_record && is_play) {
@@ -561,7 +618,6 @@ int ui_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 					// we released the last pad selected
 					ui_limit2_pressed = FALSE;		// last bar valid
 				}
-// HERE to change cursor position while playing; or maybe on noteon???
 			}
 			break;
 
@@ -588,32 +644,48 @@ int ui_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 			else {
 				key = midi2bar (key);	// convert pad number to position in table
 
-				// check whether we are in the middle of a selection or it selection is done
-				if ((!ui_limit1_pressed) && (!ui_limit2_pressed)) {
-					//if selection has been done previously (no selection in progress), pressing a pad resets everything
-					//assign pressed pad to limit1
-					ui_limit1 = key;
-					ui_limit2 = key;
-					ui_limit1_pressed = TRUE;
-					ui_limit2_pressed = FALSE;
-					// display between limit 1 and 2
-					ui_current_bar = led_ui_select (ui_limit1, ui_limit2);
+				if ((is_load) || (is_save)) {		// save or load mode: get file name
+					file_selected = key;
+					break;
 				}
+
+				if (is_play) {
+					// in case song is currently playing, then we re-position song to new cursor position
+					ui_current_bar = key;
+					// stop playing and restart straight
+					stop_playing ();
+					start_playing ();
+				}
+
 				else {
-					if ((ui_limit1_pressed) && (!ui_limit2_pressed)) {
-						//limit1 is assigned already; assign limit2
+					// no song playing; move to selection mode
+					// check whether we are in the middle of a selection or if selection is done
+					if ((!ui_limit1_pressed) && (!ui_limit2_pressed)) {
+						//if selection has been done previously (no selection in progress), pressing a pad resets everything
+						//assign pressed pad to limit1
+						ui_limit1 = key;
 						ui_limit2 = key;
-						ui_limit2_pressed = TRUE;
+						ui_limit1_pressed = TRUE;
+						ui_limit2_pressed = FALSE;
 						// display between limit 1 and 2
 						ui_current_bar = led_ui_select (ui_limit1, ui_limit2);
 					}
 					else {
-						if ((!ui_limit1_pressed) && (ui_limit2_pressed)) {
-							//limit2 is assigned already; assign limit1
-							ui_limit1 = key;
-							ui_limit1_pressed = TRUE;
+						if ((ui_limit1_pressed) && (!ui_limit2_pressed)) {
+							//limit1 is assigned already; assign limit2
+							ui_limit2 = key;
+							ui_limit2_pressed = TRUE;
 							// display between limit 1 and 2
 							ui_current_bar = led_ui_select (ui_limit1, ui_limit2);
+						}
+						else {
+							if ((!ui_limit1_pressed) && (ui_limit2_pressed)) {
+								//limit2 is assigned already; assign limit1
+								ui_limit1 = key;
+								ui_limit1_pressed = TRUE;
+								// display between limit 1 and 2
+								ui_current_bar = led_ui_select (ui_limit1, ui_limit2);
+							}
 						}
 					}
 				}
@@ -689,7 +761,7 @@ void bar_process (int mode) {
 					limit1 = blimit2;
 					limit2 = blimit1;
 				}
-printf ("limit1:%d, limit2:%d\n", limit1, limit2);
+
 				// first we cut all the bars of song from limit (beg or end of selection) position onwards
 				cut (limit1, 512, ui_current_instrument);			// cut and put in copy buffer
 				// copy color of bars to specific buffer and clear bars until end of the song
@@ -736,6 +808,7 @@ printf ("limit1:%d, limit2:%d\n", limit1, limit2);
 }
 
 
+// function used to transpose +/- an insrument in a song (half a tone each time)
 void transpo_process (int instr, int mode) {
 
 	int i;
@@ -755,4 +828,61 @@ void transpo_process (int instr, int mode) {
 		}
 	}
 	return;
+}
+
+
+// function to be run every time we want to play a song (start of play: ui_current_bar)
+void start_playing () {
+
+	jack_midi_data_t buffer[5];				// midi out buffer for lighting the pad leds and for midi clock
+
+	// clear selection if play mode in progress
+	ui_limit1 = ui_current_bar;
+	ui_limit2 = ui_current_bar;
+	ui_limit1_pressed = FALSE;
+	ui_limit2_pressed = FALSE;
+	// display between limit 1 and 2
+	ui_current_bar = led_ui_select (ui_limit1, ui_limit2);
+
+	// reset BBT position, but do not set clock_tick (it will be set at next call of process)
+	// nframes is useless for init call: set to 0
+	compute_bbt (0, &time_position, TRUE);
+	// copy BBT to previous position as well
+	memcpy (&previous_time_position, &time_position, sizeof (jack_position_t));
+
+	// send midi play
+	buffer [0] = MIDI_PLAY;
+	push_to_list (CLK, buffer);	// put in midisend buffer to change channel volume
+	// midi events will be sent during the next process call
+}
+
+
+// function to be run every time we want to stop playing a song 
+void stop_playing () {
+
+	jack_midi_data_t buffer[5];				// midi out buffer for lighting the pad leds and for midi clock
+	int i;
+
+	// clear selection if play mode in progress
+	ui_limit1 = ui_current_bar;
+	ui_limit2 = ui_current_bar;
+	ui_limit1_pressed = FALSE;
+	ui_limit2_pressed = FALSE;
+	// display between limit 1 and 2
+	ui_current_bar = led_ui_select (ui_limit1, ui_limit2);
+
+	// send all notes off to all channels
+	for (i = 0; i < 8; i++) {
+		buffer [0] = MIDI_CC | instr2chan (i);
+		buffer [1] = MIDI_CC_MUTE;
+		buffer [2] = 0x00;
+		// send midi command out to play note
+		push_to_list (OUT, buffer);
+		// midi events will be sent during the next process call
+	}	
+
+	// send midi stop
+	buffer [0] = MIDI_STOP;
+	push_to_list (CLK, buffer);	// put in midisend buffer to change channel volume
+	// midi events will be sent during the next process call
 }

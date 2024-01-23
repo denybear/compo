@@ -66,18 +66,12 @@ static void init_globals ( )
 	ui_limit1_pressed = FALSE;
 	ui_limit2_pressed = FALSE;
 
-	// init ncurses for non-blocking key capture
-	initscr();				// init curses, 
-	nodelay(stdscr, TRUE);	// no delaying, no blocking
-	noecho();				// no echoing
-	cbreak ();				// no buffering
-	keypad (stdscr, TRUE);	// special keys can be captured
-
 	// timing and tempo
 	time_beats_per_bar = 4.0;
 	time_beat_type = 4.0;
 	time_ticks_per_beat = 480.0;
 	time_beats_per_minute = 120.0;
+	time_bpm_multiplier = 1.0;
 
 	// init quantization engine
 	quantizer = THIRTY_SECOND;
@@ -91,6 +85,9 @@ static void init_globals ( )
 	is_metronome = FALSE;
 	is_load = FALSE;
 	is_save = FALSE;
+	is_quantization = FALSE;				// quantization on/off (free timing)
+	is_velocity = FALSE;					// velocity on/off (fixed)
+
 	song_length = 0;		// indicates length of the song (highest index in song [])
 	copy_length = 0;		// length of copy buffer: empty
 	tap1 = 0;				// tap tempo
@@ -266,6 +263,18 @@ int main ( int argc, char *argv[] )
 	// init global variables
 	init_globals();
 
+	// init ncurses for non-blocking key capture
+	initscr();				// init curses, 
+	nodelay(stdscr, TRUE);	// no delaying, no blocking
+	noecho();				// no echoing
+	cbreak ();				// no buffering
+	keypad (stdscr, TRUE);	// special keys can be captured
+
+	// read all the files that are in the save directory, and fill save_files table accordingly
+	if (get_files_in_directory (DEFAULT_DIR, save_files) == FALSE) {
+		fprintf ( stderr, "cannot open save directory.\n" );
+	}
+
 
 	/**************/
 	/* MAIN START */
@@ -302,12 +311,12 @@ int main ( int argc, char *argv[] )
 	int default_instr [8] = {0, 0, 2, 16, 33, 27, 48, 61};		// (drum), piano, elec piano, hammond organ, fingered bass, clean guitar, string ensemble, brass ensemble
 	set_instruments (default_instr);
 	// set volume for each channel to 64 (mid-volume)
-	int default_vol  [8] = {64, 64, 64, 64, 64, 64, 64, 64};		// volume per channel
+	int default_vol  [8] = {DEFAULT_VOLUME, DEFAULT_VOLUME, DEFAULT_VOLUME, DEFAULT_VOLUME, DEFAULT_VOLUME, DEFAULT_VOLUME, DEFAULT_VOLUME, DEFAULT_VOLUME};		// volume per channel
 	set_volumes (default_vol);
 
 	// light leds on the UI
-	led_ui_instruments ();
-	led_ui_pages ();
+	led_ui_instruments (ON);
+	led_ui_pages (ON);
 	led_ui_bars (ui_current_instrument, ui_current_page);
 	// display between limit 1 and 2
 	ui_current_bar = led_ui_select (ui_limit1, ui_limit2);
@@ -330,10 +339,43 @@ int main ( int argc, char *argv[] )
 	/* keep running until the transport stops */
 	while (1)
 	{
+		// check if user has typed the LOAD button to load file and a file is selected
+		if ((is_load) && (file_selected != 0xFF))  {
+			init_globals ();			// empty song, etc
+			load (file_selected, DEFAULT_DIR);		// load song
+			is_load = FALSE;
+
+			// set volumes and instruments
+			// assign midi instrument to each channel
+			set_instruments (instrument_list);
+			// set volume for each channel
+			set_volumes (volume_list);
+
+			// light leds on the UI
+			note2bar_color ();			// set colors to bars
+			led_ui_instruments (ON);
+			led_ui_pages (ON);
+			led_ui_bars (ui_current_instrument, ui_current_page);
+			// display between limit 1 and 2
+			ui_current_bar = led_ui_select (ui_limit1, ui_limit2);
+		}
+
+
 		// check if user has typed the SAVE button to save file
-		if (is_save) {
-			save (0, "/home/pi/");
+		if ((is_save) && (file_selected != 0xFF))  {
+			bar2note_color ();						// set colors to notes
+			save (file_selected, DEFAULT_DIR);		// save song
+			save_to_midi (file_selected, DEFAULT_DIR, FALSE);		// save non-quantized midi
+			save_to_midi (file_selected, DEFAULT_DIR, TRUE);		// save quantized midi
 			is_save = FALSE;
+			save_files [file_selected] = TRUE;		// add new file to file list
+
+			// light leds on the UI
+			led_ui_instruments (ON);
+			led_ui_pages (ON);
+			led_ui_bars (ui_current_instrument, ui_current_page);
+			// display between limit 1 and 2
+			ui_current_bar = led_ui_select (ui_limit1, ui_limit2);
 		}
 
 #ifdef WIN32

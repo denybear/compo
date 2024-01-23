@@ -14,6 +14,46 @@
 #include "midiwriter.h"
 
 
+// in the given directory, look for all the files named between 0x00 and 0x40
+// fill a table containing TRUE or FALSE, depending whether the file is there or not
+int get_files_in_directory (char * directory, uint8_t * table) {
+
+	DIR *dir;
+	struct dirent *ent;
+	char st1[64][3];
+	int i;
+
+	// empty recipient table
+	memset (table, FALSE, 64);
+
+	// build temp table for storing file names first
+	for (i = 0; i < 64; i++) {
+		// convert i into string (in lowercases and uppercases)
+		sprintf (st1 [i], "%02X", i);
+	}
+
+	if ((dir = opendir (directory)) != NULL) {
+		/* print all the files and directories within directory */
+		while ((ent = readdir (dir)) != NULL) {
+			// check if file starts with number; allow mixing lower and upper cases
+			for (i = 0; i < 64; i++) {
+				if ((st1[i][0] == ent->d_name [0])  && (st1[i][1] == ent->d_name [1])) {
+					table [i] = TRUE;
+				}
+			}
+		}
+		// processing done, close dir
+		closedir (dir);
+		return TRUE;
+	}
+
+	else {
+		// could not open directory
+		fprintf ( stderr, "Directory not found.\n" );
+		return FALSE;
+	}
+}
+
 
 // function called in case user pressed the load pad
 // name is a pad number (0-63) which corresponds to the number of the song
@@ -36,12 +76,12 @@ int load (uint8_t name, char * directory) {
 	const char *error_ptr;
 
 	// create file path
-	sprintf (filename, "%s/%02x", directory, name);
+	sprintf (filename, "%s/%02X.json", directory, name);
 
 	// create file in write mode
 	fp = fopen (filename, "rt");
 	if (fp==NULL) {
-		printf ("Cannot read save file: %s\n", filename);
+		fprintf ( stderr, "Cannot read save file: %s\n", filename);
 		return 2;
 	}
 
@@ -55,7 +95,7 @@ int load (uint8_t name, char * directory) {
 	if (json == NULL) { 
 		error_ptr = cJSON_GetErrorPtr(); 
 		if (error_ptr != NULL) { 
-			printf("Error in JSON before: %s\n", error_ptr); 
+			fprintf ( stderr, "Error in JSON before: %s\n", error_ptr); 
 		}
 		goto end;
     } 
@@ -92,6 +132,10 @@ int load (uint8_t name, char * directory) {
 	data = cJSON_GetObjectItemCaseSensitive (json, "ticks_beats_per_minute");
 	if (data == NULL) goto end;
 	time_beats_per_minute = data->valuedouble;
+
+	data = cJSON_GetObjectItemCaseSensitive (json, "time_bpm_multiplier");
+	if (data == NULL) goto end;
+	time_bpm_multiplier = data->valuedouble;
 
 	// quantizer
 	data = cJSON_GetObjectItemCaseSensitive (json, "quantizer");
@@ -204,6 +248,7 @@ int save (uint8_t name, char * directory) {
 	if (cJSON_AddNumberToObject(json, "beat_type", time_beat_type) == NULL) goto end;
 	if (cJSON_AddNumberToObject(json, "ticks_per_beat", time_ticks_per_beat) == NULL) goto end;
 	if (cJSON_AddNumberToObject(json, "ticks_beats_per_minute", time_beats_per_minute) == NULL) goto end;
+	if (cJSON_AddNumberToObject(json, "time_bpm_multiplier", time_bpm_multiplier) == NULL) goto end;
 
 	// quantizer
 	if (cJSON_AddNumberToObject(json, "quantizer", quantizer) == NULL) goto end;
@@ -216,7 +261,6 @@ int save (uint8_t name, char * directory) {
 	if (notes == NULL) goto end;
 
 	for (i = 0; i < song_length; i++) { 
-
 		note = cJSON_CreateObject();
 		if (cJSON_AddNumberToObject(note, "instrument", song [i].instrument) == NULL) goto end;
 		if (cJSON_AddNumberToObject(note, "status", song [i].status) == NULL) goto end;
@@ -236,12 +280,12 @@ int save (uint8_t name, char * directory) {
 	json_str = cJSON_Print(json); 
 
 	// create file path
-	sprintf (filename, "%s/%02x", directory, name);
+	sprintf (filename, "%s/%02X.json", directory, name);
 
 	// create file in write mode
 	fp = fopen (filename, "wt");
 	if (fp==NULL) {
-		printf ("Cannot write save file: %s\n", filename);
+		fprintf ( stderr, "Cannot write save file: %s\n", filename);
 		status = 2;
 		goto end;
 	}
@@ -273,13 +317,13 @@ int save_to_midi (uint8_t name, char * directory, int quant) {
 	uint32_t previous_tick, tick, delta;
 
 	// create file path
-	if (quant==FALSE) sprintf (filename, "%s/%02x.mid", directory, name);
-	else sprintf (filename, "%s/%02xq.mid", directory, name);
+	if (quant==FALSE) sprintf (filename, "%s/%02X.mid", directory, name);
+	else sprintf (filename, "%s/%02Xq.mid", directory, name);
 
 	// create file in write mode
 	out = fopen (filename, "wb");
 	if (out==NULL) {
-		printf ("Cannot write midi file: %s\n", filename);
+		fprintf ( stderr, "Cannot write midi file: %s\n", filename);
 		return 2;
 	}
 
@@ -328,7 +372,7 @@ int save_to_midi (uint8_t name, char * directory, int quant) {
 		// we use quant parameter to determine whether we should use quantized values or not
 		note2tick (song [i], &tick, quant);			// number of ticks from BBT (0,0,0)
 		if (previous_tick > tick) {
-			printf ("Error in generating MIDI file : negative delta time\n");		// error message in case delta time is negative
+			fprintf ( stderr, "Error in generating MIDI file : negative delta time\n");		// error message in case delta time is negative
 			tick = previous_tick;													// set delta time to 0 in this case
 		}
 		delta = tick - previous_tick;				// compute delta time between 2 events; in theory, delta should always be > 0 as note events are sorted by time

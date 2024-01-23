@@ -68,6 +68,9 @@ extern int is_record;					// record is in progress
 extern int is_metronome;				// metronome is in progress
 extern int is_save;
 extern int is_load;
+extern int is_quantization;				// quantization on/off (free timing)
+extern int is_velocity;					// velocity on/off (fixed)
+
 
 // quantization variables
 extern int quantizer;						// contains value used for quantization
@@ -84,3 +87,7 @@ extern int volume_list [8];
 
 // determine if external clock tick shall be sent or not
 extern int send_clock_tick;					// determine if midi clock shall be sent or not
+
+// tables for load/save
+extern uint8_t save_files [64];		// each save file is identified as a number; the table contains true or false depending file exists or not
+extern uint8_t file_selected;			// file number selected on the pad

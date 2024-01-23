@@ -23,6 +23,9 @@
 
 
 /* constants */
+// directory for saving files
+#define DEFAULT_DIR	"/home/pi/compo/save"
+
 // colors used by Novation Launchpad mini
 #define BLACK		0x0C
 #define LO_BLACK	0xFF	// dummy value processed as black for the UI
@@ -49,9 +52,17 @@
 #define MIDI_STOP		0xFC
 #define MIDI_CC_MUTE	0x78
 
+// default values for volum, velocity, etc
+#define DEFAULT_VELOCITY			64
+#define DEFAULT_VOLUME				64
+#define DEFAULT_METRONOME_VELOCITY	127
+
+
 /* define status, etc */
 #define TRUE	1
 #define FALSE	0
+#define ON		1
+#define OFF		0
 #define UI		0
 #define KBD		1
 #define OUT		2

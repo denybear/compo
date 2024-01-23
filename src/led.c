@@ -34,35 +34,45 @@ int color_ui_bar (int col) {
 
 
 // light the "instruments" row of leds
-void led_ui_instruments () {
+// mode OFF turns all the leds to black
+void led_ui_instruments (int mode) {
 	int i;
 	uint8_t buffer [4];
 
 	buffer [0] = MIDI_CC;
 	for (i=0; i<8; i++) {
 		buffer [1] = i + 0x68;
-		// manage case of LO_BLACK
-		if (ui_instruments [i] == LO_BLACK) buffer [2] = BLACK;
-		else buffer [2] = ui_instruments [i];
+		if (mode) {
+			// manage case of LO_BLACK
+			if (ui_instruments [i] == LO_BLACK) buffer [2] = BLACK;
+			else buffer [2] = ui_instruments [i];
+		}
+		else {
+			buffer [2] = BLACK;
+		}
 		push_to_list (UI, buffer);			// put in midisend buffer
 	}
 }
 
 // light the "pages" row of leds
-void led_ui_pages () {
+// mode OFF turns all the leds to black
+void led_ui_pages (int mode) {
 	int i;
 	uint8_t buffer [4];
 
 	buffer [0] = MIDI_NOTEON;
 	for (i=0; i<8; i++) {
 		buffer [1] = (i << 4) + 0x8;
-		buffer [2] = ui_pages [i];
+		if (mode) buffer [2] = ui_pages [i];
+		else buffer [2] = BLACK;
 		push_to_list (UI, buffer);			// put in midisend buffer
 	}
 }
 
+
 // light the "bars" table of leds
 void led_ui_bars (int instr, int page) {
+
 	int i;
 
 	for (i=0; i<64; i++) {
@@ -76,7 +86,6 @@ void led_ui_bar (int instr, int page, int bar) {
 	uint8_t buffer [4], color;
 
 	// determine color based on bar color + selection color (in case selection is on the bar)
-//	if ((ui_select [bar] == BLACK) || (ui_select [bar] == BLACK_ERASE)) color = ui_bars [instr][page][bar];
 	if (ui_select [bar] == BLACK) color = ui_bars [instr][page][bar];
 	else color = ui_select [bar];
 
@@ -163,8 +172,8 @@ uint8_t led_ui_select (int lim1, int lim2) {
 	return (start);
 }
 
-// go through the whole song, and set the "bars" tables of leds accordingly (depending a bar exists or not)
-void refresh_ui_bars () {
+// go through the whole song notes, and set the "bars" tables of leds according to notes color
+void note2bar_color () {
 
 	int i;
 	int instr, page, bar;
@@ -173,11 +182,47 @@ void refresh_ui_bars () {
 	memset (ui_bars, BLACK, 8 * 8 * 64);
 
 	for (i = 0; i <song_length; i++) {
-		// values
+		// get bar number
 		instr = song [i].instrument;
 		page = song [i].bar / 64;		// 64 bars per page
 		bar = song [i].bar % 64;
 
-		ui_bars [instr][page][bar] = LO_AMBER;		// to change to bar color when we will implement the functionality
+		ui_bars [instr][page][bar] = song [i].color;	// set to the right color
 	}
 }
+
+
+// go through the "bars" of the song, and set the notes color according to bars color
+void bar2note_color () {
+
+	int i;
+	int instr, page, bar;
+
+	for (i = 0; i <song_length; i++) {
+		// get bar number
+		instr = song [i].instrument;
+		page = song [i].bar / 64;		// 64 bars per page
+		bar = song [i].bar % 64;
+
+		song [i].color = ui_bars [instr][page][bar];	// set to the right color
+	}
+}
+
+
+// light the "files" table of leds
+void led_ui_files () {
+
+	int i;
+	uint8_t buffer [4];
+
+	for (i=0; i<64; i++) {
+
+		buffer [0] = MIDI_NOTEON;
+		buffer [1] = bar2midi (i);
+		// set color according whether we load or save file
+		if (is_load) buffer [2] = (save_files) [i] ? LO_GREEN : BLACK;
+		if (is_save) buffer [2] = (save_files) [i] ? LO_RED : BLACK;
+		push_to_list (UI, buffer);		// put in midisend buffer
+	}
+}
+

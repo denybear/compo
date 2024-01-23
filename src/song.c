@@ -553,7 +553,7 @@ void paste (u_int16_t b_limit1, int instr) {
 	// this is required to avoid issue with the erasing/deletion of bars
 	if (copy_length == 0) return;
 
-	// erase the content of bars before pasting new stuff: we don't do overdubbing
+	// erase the content of bars before pasting new stuff: we don't do overdubbing when pasting
 	// you can remove this section to do paste + overdubbing (without erasing bars first)
 	b_limit2 = (copy_buffer [copy_length - 1].bar) + 1;		// b_limit2 is last bar in copy buffer + 1 (as it is exclusive)
 	copy_cut (b_limit1, b_limit2, instr, DEL);				// erase corresponding bars in the song
@@ -593,8 +593,8 @@ void create_metronome () {
 		note.qbeat = 0xFF;
 		note.qtick = 0xFFFF;
 		note.status = MIDI_NOTEON;
-		note.key = 76;					// high wood block
-		note.vel = 127;					// max velocity
+		note.key = 76;							// high wood block
+		note.vel = DEFAULT_METRONOME_VELOCITY;	// max velocity
 		memcpy (&metronome [(i*8) + 0], &note, sizeof (note_t));
 
 		// note 1 off

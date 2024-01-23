@@ -13,24 +13,22 @@
 #include "disk.h"
 
 
-// convert pad midi number to bar number : ie 0x00-0x3F to 0-63
+// convert pad midi number to bar number : ie 0x00-0x77 to 0-63
 uint8_t midi2bar (uint8_t midi) {
 
 	uint8_t bar;
 
 	bar = (((midi & 0xF0) >> 4) * 8 ) + (midi & 0x0F);
-	//printf ("midi: %02X, bar:%02X\n", midi, bar);
 	return (bar);
 }
 
 
-// convert bar number to pad midi number : ie 0-63 to 0x00-0x3F
+// convert bar number to pad midi number : ie 0-63 to 0x00-0x77
 uint8_t bar2midi (uint8_t bar) {
 
 	uint8_t midi;
 
 	midi = ((bar >> 3) << 4) + (bar & 0x7);
-	//printf ("bar: %02X, midi:%02X\n", bar, midi);
 	return (midi);
 }
 
@@ -263,25 +261,24 @@ void quantize_song (int quant_noteon) {
 
 		if (tick_difference < 0) {
 			// negative time difference; this should never happen
-			printf ("Quantization ERROR - negative time difference between 2 consecutive notes\n");
+			fprintf ( stderr, "Quantization ERROR - negative time difference between 2 consecutive notes\n");
 			tick_difference = 0;
 		}
 
 		qtick_difference = quantize (tick_difference, quant_noteon);	// quantized time difference between the 2 notes-on
 		qtick_off = qtick_difference + qtick_on;						// add to quantized BBT of previous note, and store to quantized BBT of current note
 
-//printf ("tickon:%d, qtickon:%d, tickoff:%d tickdiff:%d, qtickdiff:%d, qtickoff:%d\n", tick_on, qtick_on, tick_off, tick_difference, qtick_difference, qtick_off);
-
 		// adjust quantized timing depending on whether we have notes on or notes off
 		// to make sure any note off is at the end of a beat
-		if (qtick_on == 0) {		// specific case if qtick_on is 0; as previous notes are all aligned on 0, whether previous note is note-off or note-on
-			if (song [i].status == MIDI_NOTEOFF) qtick_off--;
+		if (quant_noteon != FREE_TIMING) {		// adjust only if not in free timing mode
+			if (qtick_on == 0) {		// specific case if qtick_on is 0; as previous notes are all aligned on 0, whether previous note is note-off or note-on
+				if (song [i].status == MIDI_NOTEOFF) qtick_off--;
+			}
+			else {
+				if ((song [(i-1)].status == MIDI_NOTEOFF) && (song [i].status == MIDI_NOTEON)) qtick_off++;
+				if ((song [(i-1)].status == MIDI_NOTEON) && (song [i].status == MIDI_NOTEOFF)) qtick_off--;
+			}
 		}
-		else {
-			if ((song [(i-1)].status == MIDI_NOTEOFF) && (song [i].status == MIDI_NOTEON)) qtick_off++;
-			if ((song [(i-1)].status == MIDI_NOTEON) && (song [i].status == MIDI_NOTEOFF)) qtick_off--;
-		}
-		
 
 		tick2note (qtick_off, &song [i], TRUE);		// store to quantized BBT of current note
 	}	
