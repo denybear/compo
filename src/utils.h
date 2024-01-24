@@ -17,9 +17,9 @@ void quantize_song (int);
 void note2tick (note_t, uint32_t *, int);
 void tick2note (uint32_t, note_t *, int);
 void set_instrument (int, int);
-void set_instruments (int *);
+void set_instruments ();
 void set_volume (int, int);
-void set_volumes (int *);
+void set_volumes ();
 int should_play (int);
 
 

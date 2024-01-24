@@ -87,6 +87,7 @@ static void init_globals ( )
 	is_save = FALSE;
 	is_quantization = FALSE;				// quantization on/off (free timing)
 	is_velocity = FALSE;					// velocity on/off (fixed)
+	instrument_bank = 0;					// no instrument bank selected yet
 
 	song_length = 0;		// indicates length of the song (highest index in song [])
 	copy_length = 0;		// length of copy buffer: empty
@@ -309,10 +310,12 @@ int main ( int argc, char *argv[] )
 
 	// assign midi instrument to each channel
 	int default_instr [8] = {0, 0, 2, 16, 33, 27, 48, 61};		// (drum), piano, elec piano, hammond organ, fingered bass, clean guitar, string ensemble, brass ensemble
-	set_instruments (default_instr);
+	memcpy (instrument_list, default_instr, 8 * sizeof (int));
+	set_instruments ();
 	// set volume for each channel to 64 (mid-volume)
 	int default_vol  [8] = {DEFAULT_VOLUME, DEFAULT_VOLUME, DEFAULT_VOLUME, DEFAULT_VOLUME, DEFAULT_VOLUME, DEFAULT_VOLUME, DEFAULT_VOLUME, DEFAULT_VOLUME};		// volume per channel
-	set_volumes (default_vol);
+	memcpy (volume_list, default_vol, 8 * sizeof (int));
+	set_volumes ();
 
 	// light leds on the UI
 	led_ui_instruments (ON);
@@ -347,9 +350,9 @@ int main ( int argc, char *argv[] )
 
 			// set volumes and instruments
 			// assign midi instrument to each channel
-			set_instruments (instrument_list);
+			set_instruments ();
 			// set volume for each channel
-			set_volumes (volume_list);
+			set_volumes ();
 
 			// light leds on the UI
 			note2bar_color ();			// set colors to bars

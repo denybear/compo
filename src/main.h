@@ -83,13 +83,15 @@ jack_nframes_t tap1, tap2;				// used to calculate tap tempo
 int color_repeat = 0;
 
 // list of midi instrument per channel, volume per channel
-int instrument_list [8];
+int instrument_list [8];			// must be int to enable json reading
 int volume_list [8];
 
 // determine if external clock tick shall be sent or not
-int send_clock_tick;					// determine if midi clock shall be sent or not
+int send_clock_tick;			// determine if midi clock shall be sent or not
 
 // tables for load/save
 uint8_t save_files [64];		// each save file is identified as a number; the table contains true or false depending file exists or not
 uint8_t file_selected;			// file number selected on the pad
 
+// change of instrument
+uint8_t instrument_bank;		// 0 if no bank selected (no instrument selection in progress), 1 or 2 depending on bank number

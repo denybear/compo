@@ -16,3 +16,7 @@ uint8_t led_ui_select (int, int);
 void bar2note_color ();
 void note2bar_color ();
 void led_ui_files ();
+void led_ui_instrument_bank (int);
+void led_ui_single_instrument (int, int);
+void led_ui_cursor_instrument (int, int, int);
+

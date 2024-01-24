@@ -226,3 +226,65 @@ void led_ui_files () {
 	}
 }
 
+
+// light the "midi instruments" table of leds
+void led_ui_instrument_bank (int bank) {
+
+	int i;
+	uint8_t buffer [4];
+
+	for (i=0; i<64; i++) {
+
+		buffer [0] = MIDI_NOTEON;
+		buffer [1] = bar2midi (i);
+		// set color according bank number
+		if (bank == 0) buffer [2] = BLACK;
+		if (bank == 1) buffer [2] = LO_AMBER;
+		if (bank >= 2) buffer [2] = LO_ORANGE;
+		push_to_list (UI, buffer);		// put in midisend buffer
+	}
+}
+
+
+// light a single instrument (top row of leds of launchpad)
+void led_ui_single_instrument (int instr, int bank) {
+
+	uint8_t buffer [4];
+
+	buffer [0] = MIDI_CC;
+	buffer [1] = instr + 0x68;
+	// set color according bank number
+	if (bank == 0) buffer [2] = BLACK;
+	if (bank == 1) buffer [2] = LO_AMBER;
+	if (bank >= 2) buffer [2] = LO_ORANGE;
+	push_to_list (UI, buffer);			// put in midisend buffer
+}
+
+
+// light led on the pad of selected "midi instrument"
+// depending on "midi instrument" number and current bank number, it will display or not
+// onoff parameter allows to light/unlight the led 
+void led_ui_cursor_instrument (int instr_number, int bank, int onoff) {
+
+	uint8_t buffer [4];
+	int instr_pad;
+
+	instr_pad = instr_number % 64;		// pad number between 0 and 63
+
+	buffer [0] = MIDI_NOTEON;
+	buffer [1] = bar2midi (instr_pad);
+	// set color according bank number
+	if (onoff) {		// in case of ON
+		if (bank == 0) buffer [2] = BLACK;
+		if (bank == 1) buffer [2] = HI_AMBER;
+		if (bank >= 2) buffer [2] = HI_ORANGE;
+	}
+	else {				// in case of OFF
+		if (bank == 0) buffer [2] = BLACK;
+		if (bank == 1) buffer [2] = LO_AMBER;
+		if (bank >= 2) buffer [2] = LO_ORANGE;
+	}
+
+	// based on bank number, determine whether we should light pad or not (i. send midi data or not)
+	if (((instr_number / 64) + 1) == bank)	push_to_list (UI, buffer);			// put in midisend buffer
+}

@@ -232,19 +232,19 @@ int process ( jack_nframes_t nframes, void *arg )
 	switch (ch) {
 		case NUM_ENTER:	// PLAY
 		case SNUM_ENTER:
-			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
+			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
 			// status variable
 			is_play = is_play ? FALSE : TRUE;
 
 			if (is_play) start_playing ();
 			else stop_playing ();
 			break;
-		case NUM_3:	// VELOCITY ON/OFF
-			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
+		case SNUM_3:	// VELOCITY ON/OFF
+			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
 			is_velocity = is_velocity ? FALSE : TRUE;
 			break;
-		case SNUM_3:	// QUANTIFY
-			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
+		case NUM_3:	// QUANTIFY
+			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
 			is_quantization = is_quantization ? FALSE : TRUE;
 
 			// toggle between quantization and no quantization
@@ -253,7 +253,7 @@ int process ( jack_nframes_t nframes, void *arg )
 			break;
 		case NUM_DOT:	// RECORD
 		case SNUM_DOT:
-			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
+			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
 			// make sure no selection is in progress to enable record
 			// status variable
 			is_record = is_record ? FALSE : TRUE;
@@ -263,7 +263,7 @@ int process ( jack_nframes_t nframes, void *arg )
 			break;
 		case NUM_4:	// TAP TEMPO
 		case SNUM_4:
-			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
+			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
 			if (tap1 == 0) {
 				tap1 = jack_last_frame_time(client);
 				tap2 = 0;
@@ -294,67 +294,67 @@ int process ( jack_nframes_t nframes, void *arg )
 			}
 			break;
 		case SNUM_5:	// TEMPO -
-			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
+			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
 			if (time_bpm_multiplier <= 0.1) break;		// if low boundary reached, do nothing
 			time_bpm_multiplier -= 0.1;
 			time_position.beats_per_minute = (int) (time_beats_per_minute * time_bpm_multiplier);
 			break;
 		case NUM_5:	// RESET TEMPO
 		case NUM_6:
-			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
+			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
 			time_bpm_multiplier = 1.0;
 			time_position.beats_per_minute = (int) (time_beats_per_minute * time_bpm_multiplier);
 			break;
 		case SNUM_6:	// TEMPO +
-			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
+			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
 			if (time_bpm_multiplier >= 3.0) break;		// if high boundary reached, do nothing
 			time_bpm_multiplier += 0.1;
 			time_position.beats_per_minute = (int) (time_beats_per_minute * time_bpm_multiplier);
 			break;
 		case NUM_BACK:	// METRONOME ON/OFF
 		// case SNUM_BACK:
-			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
+			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
 			is_metronome = is_metronome ? FALSE : TRUE;
 			break;
 		case NUM_1:	// COPY
 		case SNUM_1:
-			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
+			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
 			bar_process (COPY);
 			break;
 		case NUM_2:	// CUT
 		case SNUM_2:
-			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
+			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
 			bar_process (CUT);
 			break;
 		case NUM_0:	// PASTE
 		case SNUM_0:
-			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
+			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
 			bar_process (PASTE);
 			break;
 		case NUM_000:	// COLOR
 		// case SNUM_000:
-			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
-			if ((color_repeat % 3) == 0) bar_process (COLOR);		// call color only 1 time out of 3
+			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
+			if ((color_repeat % 3) == 0) bar_process (COLOR);			// call color only 1 time out of 3
 			color_repeat++;
 			break;
 		case NUM_7:	// INSERT BARS
 		case SNUM_7:
-			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
+			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
 			bar_process (INSERT);
 			break;
 		case NUM_8:	// REMOVE BARS
 		case SNUM_8:
-			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
+			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
 			bar_process (REMOVE);
 			break;
 		case NUM_9:	// TRANSPO -
 		case SNUM_9:
-			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
+			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
 			transpo_process (ui_current_instrument, MINUS);
 			break;
 		case NUM_PLUS:	// TRANSPO +
 		case SNUM_PLUS:
-			if ((is_load) || (is_save)) break;		// do not process if in save mode or load mode
+			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
 			transpo_process (ui_current_instrument ,PLUS);
 			break;
 		case NUM_SLASH:	// LOAD
@@ -367,6 +367,7 @@ int process ( jack_nframes_t nframes, void *arg )
 
 				is_save = FALSE;
 				file_selected = 0xFF;
+				instrument_bank = 0;
 
 				// display screen with file names
 				led_ui_instruments (OFF);
@@ -396,6 +397,7 @@ int process ( jack_nframes_t nframes, void *arg )
 
 				is_load = FALSE;
 				file_selected = 0xFF;
+				instrument_bank = 0;
 
 				// display screen with file names
 				led_ui_instruments (OFF);
@@ -417,6 +419,37 @@ int process ( jack_nframes_t nframes, void *arg )
 			break;
 		case NUM_STAR:	// INSTRUMENT
 		case SNUM_STAR:
+			if (instr2chan (ui_current_instrument) == 9) break;		// if drum (channel 9), then we don't allow change of midi instruments
+			instrument_bank = (instrument_bank >= 2) ? 0 : (instrument_bank + 1);
+
+			if (instrument_bank) {
+
+				// stop playing, clear save/load flags
+				is_play = FALSE;	// stop playing current song
+				stop_playing ();
+
+				is_load = FALSE;
+				is_save = FALSE;
+				file_selected = 0xFF;
+
+				// display screen with instrument names
+				led_ui_instruments (OFF);
+				led_ui_single_instrument (ui_current_instrument, instrument_bank);	// display a single led on the selected instrument
+				led_ui_pages (OFF);
+				led_ui_instrument_bank (instrument_bank);
+
+				// light pad of currently selected midi instrument (if in this bank)
+				led_ui_cursor_instrument (instrument_list [ui_current_instrument], instrument_bank, ON);
+			}
+			else {
+				// here, the user has pressed instrument again; we should go back to previous song state
+				// light leds on the UI
+				led_ui_instruments (ON);
+				led_ui_pages (ON);
+				led_ui_bars (ui_current_instrument, ui_current_page);
+				// display between limit 1 and 2
+				ui_current_bar = led_ui_select (ui_limit1, ui_limit2);
+			}
 			break;
 		default:
 			break;
@@ -484,11 +517,7 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 			buffer [1]--;
 			if (buffer [1] < 8) {
 				volume_list [buffer[1]] = buffer [2];	// set new volume
-
-				// get midi channel from instrument number, and assign it to midi command
-				buffer [0] = (buffer [0] & 0xF0) | (instr2chan (buffer [1]));
-				buffer [1] = 0x07;		// midi volume change
-				push_to_list (OUT, buffer);	// put in midisend buffer to change channel volume
+				set_volume (buffer [1], buffer [2]);
 			}
 			break;
 	}
@@ -511,6 +540,7 @@ int ui_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 	// check which event has been received
 	switch (cmd) {
 		case MIDI_CC:
+			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
 
 			// an "instrument" pad has been pressed
 			// do any work only if "press on", not "press off" (release of the pad)
@@ -601,6 +631,8 @@ int ui_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 			break;
 
 		case MIDI_NOTEOFF:
+			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
+
 			// a "page" pad has been pressed
 			if ((key & 0x0F) == 0x08) {
 				// do nothing
@@ -622,8 +654,11 @@ int ui_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 			break;
 
 		case MIDI_NOTEON:
+
 			// a "page" pad has been pressed
 			if ((key & 0x0F) == 0x08) {
+				if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
+
 				key = (key & 0xF0) >> 4;
 				// do some work only if pressed pad is different from previous
 				if (key != ui_current_page) {
@@ -646,6 +681,19 @@ int ui_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 
 				if ((is_load) || (is_save)) {		// save or load mode: get file name
 					file_selected = key;
+					break;
+				}
+
+				if (instrument_bank) {				// midi instrument selection in progress
+					// light_off currently selected midi instrument (if in this bank)
+					led_ui_cursor_instrument (instrument_list [ui_current_instrument], instrument_bank, OFF);
+
+					instrument_list [ui_current_instrument] = key + ((instrument_bank - 1) * 64);
+					// light_on currently selected midi instrument (if in this bank)
+					led_ui_cursor_instrument (instrument_list [ui_current_instrument], instrument_bank, ON);
+
+					// set new midi instrument
+					set_instrument (ui_current_instrument, instrument_list [ui_current_instrument]);
 					break;
 				}
 

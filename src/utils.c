@@ -230,19 +230,101 @@ uint32_t quantize (uint32_t tick, int quant) {
 // duration between notes-on and notes-off are quantized according to quant_noteoff parameter
 void quantize_song (int quant_noteon) {
 
-	int i;
+	int i, j, prev;
 	note_t note;						// temp structure to store BBT info
 	uint32_t tick_on, qtick_on;			// temp structure to store tick info
 	uint32_t tick_off, qtick_off;		// temp structure to store tick info
 	int tick_difference, qtick_difference;
 
+/*
+// COMPLEX QUANTIZATION ROUTINE BELOW !!!
+	// how quantization is done:
+	// first note-on of each instrument in the song is quantized according its absolute timing in the song
+	// each next note-on of the same instrument is quantized according its relative timing compared to previous note-on
+	// (said differently, time difference between the 2 consecutive notes is quantized with quant_noteon value)
+	// then, song is scanned again to find the corresponding note-off to a note-on
+	// Note-off is quantized according its relative timing compared to corresponding note-on (ie. time difference)
+	// another processing is done for note-off, to make sure a new bar never starts with note-off (useful for copy-paste). This consist in decrementing quantized value for note-offs
+
+	if (song_length == 0) return;		// make sure song exists
+
+	// go instrument by instrument
+	for (j = 0; j <  8; j++) {
+		// search for first note
+		for (i = 0; i < song_length; i ++) {
+			if ((song [i].instrument == j) && (song [i].status == MIDI_NOTEON)) {
+				// quantize first note on
+				note2tick (song [i], &tick_on, FALSE);			// number of ticks from BBT (0,0,0)
+				qtick_on = quantize (tick_on, quant_noteon);	// quantized number of ticks
+				tick2note (qtick_on, &song [i], TRUE);			// store to qBBT of the song's note
+				break;		// leave loop
+			}
+		}
+		if (i == song_length) continue;		// no notes found for this instrument: next loop
+
+		// quantize the rest of the song (notes-on), based on time difference with the previous note-on
+		prev = i;
+		i++;
+		while ( i < song_length) {
+			if ((song [i].instrument == j) && (song [i].status == MIDI_NOTEON)) {
+				// next note-on found !
+				// determine delta time between midi event and previous midi event
+				note2tick (song [prev], &tick_on, FALSE);			// number of ticks from BBT (0,0,0)
+				note2tick (song [prev], &qtick_on, TRUE);			// number of quantized ticks from BBT (0,0,0)
+				note2tick (song [i], &tick_off, FALSE);				// number of ticks from BBT (0,0,0)
+				tick_difference = tick_off - tick_on;
+
+				if (tick_difference < 0) {
+					// negative time difference; this should never happen
+					fprintf ( stderr, "Quantization ERROR - negative time difference between 2 consecutive notes-on\n");
+					tick_difference = 0;
+				}
+
+				qtick_difference = quantize (tick_difference, quant_noteon);	// quantized time difference between the 2 notes-on
+				qtick_off = qtick_difference + qtick_on;						// add to quantized BBT of previous note, and store to quantized BBT of current note
+				tick2note (qtick_off, &song [i], TRUE);							// store to quantized BBT of current note
+				prev = i;
+			}
+			i++;
+		}
+	}
+
+	// quantize the rest of the song (notes-off), based on time difference with the corresponding note-on
+	// search for note-on, then corresponding note-off
+	for (i = 0; i < song_length; i ++) {
+		if (song [i].status == MIDI_NOTEON) {		// note-on found
+			for (j = i; j < song_length; j++) {		// go through rest of the song to find the first note-off
+				if ((song [j].key == song [i].key) && (song [j].instrument == song [i].instrument) && (song [j].status == MIDI_NOTEOFF)) {
+					// corresponding note-off found !
+					// determine delta time between midi event and previous midi event
+					note2tick (song [i], &tick_on, FALSE);			// number of ticks from BBT (0,0,0)
+					note2tick (song [i], &qtick_on, TRUE);			// number of quantized ticks from BBT (0,0,0)
+					note2tick (song [j], &tick_off, FALSE);			// number of ticks from BBT (0,0,0)
+					tick_difference = tick_off - tick_on;
+
+					if (tick_difference < 0) {
+						// negative time difference; this should never happen
+						fprintf ( stderr, "Quantization ERROR - negative time difference between note-on & note-off\n");
+						tick_difference = 0;
+					}
+
+					qtick_difference = quantize (tick_difference, quant_noteon);	// quantized time difference between the 2 notes-on
+					qtick_off = qtick_difference + qtick_on;						// add to quantized BBT of previous note, and store to quantized BBT of current note
+					qtick_off--;													// adjust qtick_off so it does not start with a new bar
+					tick2note (qtick_off, &song [j], TRUE);							// store to quantized BBT of current note
+					break;		// leave loop : next note-on
+				}
+			}
+		}
+	}
+*/
+
+// SIMPLE QUANTIFICATION ROUTINE BELOW !!!
 	// how quantization is done:
 	// first note of song is quantized according its absolute timing in the song
 	// each next note is quantized according its relative timing compared to previous note
 	// (said differently, time difference between the 2 consecutive notes is quantized with quant_noteon value)
 	// a processing is done for note-off, to make sure a new bar never starts with note-off (useful for copy-paste). This consist in decrementing quantized value for note-offs
-
-	if (song_length == 0) return;		// make sure song exists
 	
 	// quantize first note found
 	note2tick (song [0], &tick_on, FALSE);			// number of ticks from BBT (0,0,0)
@@ -281,7 +363,7 @@ void quantize_song (int quant_noteon) {
 		}
 
 		tick2note (qtick_off, &song [i], TRUE);		// store to quantized BBT of current note
-	}	
+	}
 }
 
 
@@ -316,62 +398,50 @@ void tick2note (uint32_t tick, note_t *note, int quantized) {
 
 
 // set a midi instrument to one channel by sending midi commands
-// midi send is optimized (no midi command sent if no change in instruments)
 // https://www.recordingblogs.com/wiki/midi-program-change-message
 void set_instrument (int i, int instr) {
 
 	uint8_t buffer [4], chan;
 	
-	if (instrument_list [i] != instr) {
-		instrument_list [i] = instr;
-		chan = instr2chan (i);
-		if (chan != 9) {
-			// non-drum instruments will get program change
-			buffer [0] = MIDI_PC | chan;
-			buffer [1] = instrument_list [i];
-			buffer [2] = 0;
+	chan = instr2chan (i);
+	if (chan == 9) return;			// no instrument set for channel 9 (drum)
 
-			push_to_list (OUT, buffer);			// put in midi send buffer to assign instruments to midi channels
-		}
-	}
+	buffer [0] = MIDI_PC | chan;
+	buffer [1] = instr;
+	buffer [2] = 0;
+
+	push_to_list (OUT, buffer);		// put in midi send buffer to assign instruments to midi channels
 }
 
 
-// set a midi instrument to each channel by sending midi commands
-// midi send is optimized (no midi command sent if no change in instruments)
-void set_instruments (int *instr) {
+// set a midi instrument to each channel by sending midi commands, according to instruments list
+void set_instruments () {
 
 	int i;
 	
-	for (i = 0; i < 8; i++) set_instrument (i, instr [i]);
+	for (i = 0; i < 8; i++) set_instrument (i, instrument_list [i]);
 }
 
 
 // set volume to one midi channel
-// midi send is optimized (no volume command sent if no change in instruments)
 void set_volume (int i, int vol) {
 
 	uint8_t buffer [4];
 
-	if (volume_list [i] != vol) {
-		volume_list [i] = vol;
+	buffer [0] = MIDI_CC | instr2chan (i);
+	buffer [1] = 0x07;					// 0x07 is Volume Control Change
+	buffer [2] = vol;					// volume goes from 0 to 127
 
-		buffer [0] = MIDI_CC | instr2chan (i);
-		buffer [1] = 0x07;					// 0x07 is Volume Control Change
-		buffer [2] = vol;					// volume goes from 0 to 127
-
-		push_to_list (OUT, buffer);			// put in midi send buffer to assign volume to midi channels
-	}
+	push_to_list (OUT, buffer);			// put in midi send buffer to assign volume to midi channels
 }
 
 
-// init volume to each midi channel
-// midi send is optimized (no volume command sent if no change in instruments)
-void set_volumes (int *vol) {
+// init volume to each midi channel, according to volume list
+void set_volumes () {
 
 	int i;
 	
-	for (i = 0; i < 8; i++) set_volume (i, vol [i]);
+	for (i = 0; i < 8; i++) set_volume (i, volume_list [i]);
 }
 
 

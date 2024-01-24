@@ -90,4 +90,7 @@ extern int send_clock_tick;					// determine if midi clock shall be sent or not
 
 // tables for load/save
 extern uint8_t save_files [64];		// each save file is identified as a number; the table contains true or false depending file exists or not
-extern uint8_t file_selected;			// file number selected on the pad
+extern uint8_t file_selected;		// file number selected on the pad
+
+// change of instrument
+extern uint8_t instrument_bank;		// 0 if no bank selected (no instrument selection in progress), 1 or 2 depending on bank number
