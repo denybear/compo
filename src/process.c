@@ -239,11 +239,11 @@ int process ( jack_nframes_t nframes, void *arg )
 			if (is_play) start_playing ();
 			else stop_playing ();
 			break;
-		case SNUM_3:	// VELOCITY ON/OFF
+		case NUM_3:	// VELOCITY ON/OFF
 			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
 			is_velocity = is_velocity ? FALSE : TRUE;
 			break;
-		case NUM_3:	// QUANTIFY
+		case SNUM_3:	// QUANTIFY
 			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
 			is_quantization = is_quantization ? FALSE : TRUE;
 
@@ -300,12 +300,12 @@ int process ( jack_nframes_t nframes, void *arg )
 			time_position.beats_per_minute = (int) (time_beats_per_minute * time_bpm_multiplier);
 			break;
 		case NUM_5:	// RESET TEMPO
-		case NUM_6:
+		case SNUM_6:
 			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
 			time_bpm_multiplier = 1.0;
 			time_position.beats_per_minute = (int) (time_beats_per_minute * time_bpm_multiplier);
 			break;
-		case SNUM_6:	// TEMPO +
+		case NUM_6:	// TEMPO +
 			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
 			if (time_bpm_multiplier >= 3.0) break;		// if high boundary reached, do nothing
 			time_bpm_multiplier += 0.1;
