@@ -26,6 +26,11 @@
 // directory for saving files
 #define DEFAULT_DIR	"/home/pi/compo/save"
 
+// MIDI mode values
+#define QSYNTH		0
+#define FLUIDSYNTH	1
+#define MIDI_EXPORT	2
+
 // colors used by Novation Launchpad mini
 #define BLACK		0x0C
 #define LO_BLACK	0xFF	// dummy value processed as black for the UI

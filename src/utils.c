@@ -34,12 +34,29 @@ uint8_t bar2midi (uint8_t bar) {
 
 
 // convert song instrument to midi channel
-uint8_t instr2chan (uint8_t instr) {
+uint8_t instr2chan (uint8_t instr, int mode) {
 
-	const uint8_t chan [8] = {9, 0, 1, 2, 3, 4, 5, 6};		// 1st instrument is drum channel
-	return (chan [instr]);
+	const uint8_t midi_export [8] = {9, 0, 1, 2, 3, 4, 5, 6};		// 1st instrument is drum channel
+	const uint8_t fluidsynth [8] = {9, 0, 1, 2, 3, 4, 5, 6};		// 1st instrument is drum channel
+	const uint8_t qsynth [8] = {8, 0, 2, 4, 6, 10, 12, 14};			// 1st instrument is drum channel; make sure channel 8 is configured as drum in qsynth
+	
+	if (mode == QSYNTH)	return (qsynth [instr]);
+	if (mode == FLUIDSYNTH)	return (fluidsynth [instr]);
+	return (midi_export [instr]);									// midi export and the rest
 }
 
+
+// returns TRUE is instrument is drum, FALSE if not; depending on the channel mode
+int is_drum (uint8_t instr, int mode) {
+
+	if (mode == QSYNTH) {											// specific case for qsynth
+		if (instr2chan (instr, mode) == 8) return TRUE;
+		else return FALSE;
+	}
+
+	if (instr2chan (instr, mode) == 9) return TRUE;					// all the other midi modes
+	else return FALSE;
+}
 
 
 // add led request to the list of requests to be processed
@@ -403,8 +420,8 @@ void set_instrument (int i, int instr) {
 
 	uint8_t buffer [4], chan;
 	
-	chan = instr2chan (i);
-	if (chan == 9) return;			// no instrument set for channel 9 (drum)
+	chan = instr2chan (i, midi_mode);
+	if (is_drum (i, midi_mode)) return;			// no instrument set for drum channel
 
 	buffer [0] = MIDI_PC | chan;
 	buffer [1] = instr;
@@ -428,7 +445,7 @@ void set_volume (int i, int vol) {
 
 	uint8_t buffer [4];
 
-	buffer [0] = MIDI_CC | instr2chan (i);
+	buffer [0] = MIDI_CC | instr2chan (i, midi_mode);
 	buffer [1] = 0x07;					// 0x07 is Volume Control Change
 	buffer [2] = vol;					// volume goes from 0 to 127
 

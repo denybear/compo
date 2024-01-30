@@ -344,8 +344,8 @@ int save_to_midi (uint8_t name, char * directory, int quant) {
 
 	//set instruments for each channel
 	for (i = 0; i < 8; i++) {
-		chan = instr2chan (i);
-		if (chan != 9) {
+		chan = instr2chan (i, MIDI_EXPORT);
+		if (is_drum (i, MIDI_EXPORT) == FALSE) {
 			// non-drum instruments will get program change
 			trackSize += WriteProgramChange(0, chan, instrument_list [i], out);			// instrument change
 		}
@@ -353,7 +353,7 @@ int save_to_midi (uint8_t name, char * directory, int quant) {
 
 	//set volumes for each channel
 	for (i = 0; i < 8; i++) {
-		chan = instr2chan (i);
+		chan = instr2chan (i, MIDI_EXPORT);
 		trackSize += WriteControlChange(0, chan, 0x07, volume_list [i], out);			// instrument change
 	}
 
@@ -366,7 +366,7 @@ int save_to_midi (uint8_t name, char * directory, int quant) {
 		else vel = 0;			// note-off can be defined as note-on with 0 velocity
 
 		// determine channel
-		chan = instr2chan (song [i].instrument);
+		chan = instr2chan (song [i].instrument, MIDI_EXPORT);
 
 		// determine delta time between midi event and previous midi event
 		// we use quant parameter to determine whether we should use quantized values or not

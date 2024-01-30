@@ -9,6 +9,12 @@
 /* global variables */
 /********************/
 
+// Midi mode: is either QSYNTH or FLUIDSYNTH (or MIDI_EXPORT)
+// in QSYNTH mode, midi channels that are used by the program are even channels (odd channels are used for effects)
+// with the 2 other modes, we use standard channel numbering
+// in current build, we use QSYNTH
+int midi_mode = QSYNTH;
+
 // Time and tempo variables, global to the entire transport timeline.
 // There is no attempt to keep a true tempo map.  The default time
 // signature is "march time": 4/4, 120bpm

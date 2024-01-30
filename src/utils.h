@@ -7,7 +7,8 @@
 
 uint8_t midi2bar (uint8_t);
 uint8_t bar2midi (uint8_t);
-uint8_t instr2chan (uint8_t);
+uint8_t instr2chan (uint8_t, int);
+int is_drum (uint8_t, int);
 int push_to_list (int, uint8_t *);
 int pull_from_list (int, uint8_t *);
 int midi_write (void *, jack_nframes_t, jack_midi_data_t *);

@@ -47,7 +47,7 @@ int process ( jack_nframes_t nframes, void *arg )
 		// go through the notes that we shall play
 		for (i=0; i<lg; i++) {
 			// note was not played live; play it
-			buffer [0] = (notes_to_play [i].status) | (instr2chan (notes_to_play [i].instrument));
+			buffer [0] = (notes_to_play [i].status) | (instr2chan (notes_to_play [i].instrument, midi_mode));
 			buffer [1] = notes_to_play [i].key;
 			buffer [2] = notes_to_play [i].vel;
 			// adjust velocity in case of fixed velocity && note-on
@@ -64,7 +64,7 @@ int process ( jack_nframes_t nframes, void *arg )
 			// go through the notes that we shall play
 			for (i=0; i<lg; i++) {
 				// note was not played live; play it
-				buffer [0] = (notes_to_play [i].status) | (instr2chan (notes_to_play [i].instrument));
+				buffer [0] = (notes_to_play [i].status) | (instr2chan (notes_to_play [i].instrument, midi_mode));
 				buffer [1] = notes_to_play [i].key;
 				buffer [2] = notes_to_play [i].vel;
 				// send midi command out to play note
@@ -419,7 +419,7 @@ int process ( jack_nframes_t nframes, void *arg )
 			break;
 		case NUM_STAR:	// INSTRUMENT
 		case SNUM_STAR:
-			if (instr2chan (ui_current_instrument) == 9) break;		// if drum (channel 9), then we don't allow change of midi instruments
+			if (is_drum (ui_current_instrument, midi_mode)) break;		// if drum, then we don't allow change of midi instruments
 			instrument_bank = (instrument_bank >= 2) ? 0 : (instrument_bank + 1);
 
 			if (instrument_bank) {
@@ -477,7 +477,7 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 
 			// play the music straight
 			// get midi channel from instrument number, and assign it to midi command
-			buffer [0] = (buffer [0] & 0xF0) | (instr2chan (ui_current_instrument));
+			buffer [0] = (buffer [0] & 0xF0) | (instr2chan (ui_current_instrument, midi_mode));
 			// play note only if note should be played (mute, solo, etc) or not note on
 			// means : we play notes off all the time, even if channel is muted 
 			if (should_play (ui_current_instrument) || ((buffer [0] & 0xF0) != MIDI_NOTEON)) {
@@ -921,7 +921,7 @@ void stop_playing () {
 
 	// send all notes off to all channels
 	for (i = 0; i < 8; i++) {
-		buffer [0] = MIDI_CC | instr2chan (i);
+		buffer [0] = MIDI_CC | instr2chan (i, midi_mode);
 		buffer [1] = MIDI_CC_MUTE;
 		buffer [2] = 0x00;
 		// send midi command out to play note
