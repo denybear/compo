@@ -28,7 +28,7 @@ void write_to_song (note_t note) {
 
 	// special case if song is empty; we insert note straight ahead and leave
 	if (song_length == 0) {
-		memcpy (&song [0], &note, sizeof (note));		// memcpy is fine as no overlapping in memory
+		memcpy (&song [0], &note, sizeof (note_t));		// memcpy is fine as no overlapping in memory
 		song_length++;
 		return;
 	}
@@ -58,9 +58,9 @@ void write_to_song (note_t note) {
 	// in case limit1 == limit2, it means there is no similar bar in the song yet; we can insert the note and leave
 	if (bar_limit1 == bar_limit2) {
 		// move rest of song 1 note ahead (to the right)
-		memmove (&song [bar_limit1 + 1], &song [bar_limit1], (song_length - bar_limit1) * sizeof (note));		// memmove to prevent memory overlapping
+		memmove (&song [bar_limit1 + 1], &song [bar_limit1], (song_length - bar_limit1) * sizeof (note_t));		// memmove to prevent memory overlapping
 		// copy note in the empty space
-		memcpy (&song [bar_limit1], &note, sizeof (note));		// memcpy is fine as no overlapping in memory
+		memcpy (&song [bar_limit1], &note, sizeof (note_t));		// memcpy is fine as no overlapping in memory
 		song_length++;
 		return;
 	}
@@ -92,9 +92,9 @@ void write_to_song (note_t note) {
 	// in case limit1 == limit2, it means there is no similar tick in the bar yet; we can insert the note and leave
 	if (tick_limit1 == tick_limit2) {
 		// move rest of song 1 note ahead (to the right)
-		memmove (&song [tick_limit1 + 1], &song [tick_limit1], (song_length - tick_limit1) * sizeof (note));		// memmove to prevent memory overlapping
+		memmove (&song [tick_limit1 + 1], &song [tick_limit1], (song_length - tick_limit1) * sizeof (note_t));		// memmove to prevent memory overlapping
 		// copy note in the empty space
-		memcpy (&song [tick_limit1], &note, sizeof (note));		// memcpy is fine as no overlapping in memory
+		memcpy (&song [tick_limit1], &note, sizeof (note_t));		// memcpy is fine as no overlapping in memory
 		song_length++;
 		return;
 	}
@@ -125,9 +125,9 @@ void write_to_song (note_t note) {
 	// in any case, we insert the note at limit1; either it is the right instrument already, either there is no other note with the same instrument and we can insert anyway
 	if (instrument_limit1 == instrument_limit1) {		// useless, but this is to keep the same structure as the previous 2 other sections
 		// move rest of song 1 note ahead (to the right)
-		memmove (&song [instrument_limit1 + 1], &song [instrument_limit1], (song_length - instrument_limit1) * sizeof (note));		// memmove to prevent memory overlapping
+		memmove (&song [instrument_limit1 + 1], &song [instrument_limit1], (song_length - instrument_limit1) * sizeof (note_t));		// memmove to prevent memory overlapping
 		// copy note in the empty space
-		memcpy (&song [instrument_limit1], &note, sizeof (note));		// memcpy is fine as no overlapping in memory
+		memcpy (&song [instrument_limit1], &note, sizeof (note_t));		// memcpy is fine as no overlapping in memory
 		song_length++;
 		return;
 	}

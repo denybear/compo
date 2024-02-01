@@ -293,13 +293,13 @@ int process ( jack_nframes_t nframes, void *arg )
 				}
 			}
 			break;
-		case SNUM_5:	// TEMPO -
+		case NUM_5:	// TEMPO -
 			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
 			if (time_bpm_multiplier <= 0.1) break;		// if low boundary reached, do nothing
 			time_bpm_multiplier -= 0.1;
 			time_position.beats_per_minute = (int) (time_beats_per_minute * time_bpm_multiplier);
 			break;
-		case NUM_5:	// RESET TEMPO
+		case SNUM_5:	// RESET TEMPO
 		case SNUM_6:
 			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
 			time_bpm_multiplier = 1.0;

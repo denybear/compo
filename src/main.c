@@ -292,19 +292,25 @@ int main ( int argc, char *argv[] )
 	/* go through the list of ports to be connected and connect them by pair (server, client) */
 	/* fixed devices and fluidsynth output */
 	if ( jack_connect ( client, "a2j:Launchpad Mini (capture): Launchpad Mini MIDI 1", "compo.a:midi_UI_in") ) {
-			fprintf ( stderr, "cannot connect ports (between client and server).\n" );
+			fprintf ( stderr, "cannot connect ports (between client and server): UI in\n" );
 	}
 	if ( jack_connect ( client, "compo.a:midi_UI_out", "a2j:Launchpad Mini (playback): Launchpad Mini MIDI 1") ) {
-			fprintf ( stderr, "cannot connect ports (between client and server).\n" );
+			fprintf ( stderr, "cannot connect ports (between client and server): UI out\n" );
 	}
 	if ( jack_connect ( client, "a2j:MPK Mini Mk II (capture): MPK Mini Mk II MIDI 1", "compo.a:midi_KBD_in") ) {
-			fprintf ( stderr, "cannot connect ports (between client and server).\n" );
+			fprintf ( stderr, "cannot connect ports (between client and server): KBD in\n" );
 	}
 	if ( jack_connect ( client, "compo.a:midi_KBD_out", "a2j:MPK Mini Mk II (playback): MPK Mini Mk II MIDI 1") ) {
-			fprintf ( stderr, "cannot connect ports (between client and server).\n" );
+			fprintf ( stderr, "cannot connect ports (between client and server): KBD out\n" );
 	}
 	if ( jack_connect ( client, "compo.a:midi_out", "qsynth:midi_00") ) {
-			fprintf ( stderr, "cannot connect ports (between client and server).\n" );
+			fprintf ( stderr, "cannot connect ports (between client and server): SYNTH out\n" );
+	}
+	if ( jack_connect ( client, "compo.a:clock_out", "a2j:Circuit (playback): Circuit MIDI 1") ) {
+			fprintf ( stderr, "cannot connect ports (between client and server): CLK out (Novation)\n" );
+	}
+	if ( jack_connect ( client, "compo.a:clock_out", "a2j:MPK Mini Mk II (playback): MPK Mini Mk II MIDI 1") ) {
+			fprintf ( stderr, "cannot connect ports (between client and server): CLK out (Akai)\n" );
 	}
 
 
