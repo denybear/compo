@@ -66,6 +66,8 @@ note_t song [SONG_SIZE];			// assume song will have less than 10000 notes in it
 int song_length;					// highest index in song []
 note_t copy_buffer [COPY_SIZE];		// copy-paste buffer
 int copy_length;					// highest index in copy_buffer []
+note_t save_copy_buffer [COPY_SIZE];		// copy-paste buffer: save for insert/del bars
+int save_copy_length;						// highest index in copy_buffer []: : save for insert/del bars
 uint8_t led_copy_buffer [512];		// 64 bytes * 8 pages to store led status of bars of copy buffer
 int led_copy_length;				// highest index in led_copy_buffer []
 note_t metronome [16];				// metronome: 4 note-on, 4 note-off on 2 bars

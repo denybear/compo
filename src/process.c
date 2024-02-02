@@ -800,6 +800,10 @@ void bar_process (int mode) {
 				break;
 			case INSERT:
 			case REMOVE:
+				// save copy-paste buffer (as we will use it for insert/remove bars)
+				memcpy (save_copy_buffer, copy_buffer, COPY_SIZE * sizeof (note_t));
+				save_copy_length = copy_length;
+
 				// insert or remove X bars at the given position
 				if (mode == INSERT) {		// INSERT bars
 					limit1 = blimit1;
@@ -837,6 +841,10 @@ void bar_process (int mode) {
 					// check we are not out of boundaries (in case of insert; no issue with remove)
 					if (page < 8) ui_bars [ui_current_instrument][page][bar] = led_copy_buffer [i];
 				}
+
+				// restore copy-paste buffer (as it could be full of usefull stuff)
+				memcpy (copy_buffer, save_copy_buffer, COPY_SIZE * sizeof (note_t));
+				copy_length = save_copy_length;
 				break;
 			case COLOR:
 				// change color of bars to their next color

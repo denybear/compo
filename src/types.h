@@ -73,7 +73,7 @@
 #define OUT		2
 #define CLK		3
 #define SONG_SIZE	10000		// max number of notes for a song
-#define COPY_SIZE	1000		// max number of notes for copy buffer
+#define COPY_SIZE	10000		// max number of notes for copy buffer
 
 /* list management (used for led mgmt) */
 #define LIST_ELT 100
