@@ -30,7 +30,7 @@ jack_position_t previous_time_position;		// structure that contains BBT for the 
 jack_port_t *midi_UI_in, *midi_UI_out;
 jack_port_t *midi_KBD_in, *midi_KBD_out;
 jack_port_t *midi_out;
-jack_port_t *clock_out;
+jack_port_t *clock_out, *clock_KBD_out;		// clock out signal is sent at all times; clock KBD out is only sent during play mode
 
 // define JACKD client : this is this program
 jack_client_t *client;
@@ -44,14 +44,16 @@ int ui_current_page;			// page currently selected
 int ui_current_bar;				// bar currently selected (between 0 and 63)
 
 // define the structures for managing midi out (ie. lists)
-uint8_t ui_list [LIST_ELT] [3];		// midi out buffer for UI
-int ui_list_index = 0;				// index in the list
-uint8_t kbd_list [LIST_ELT] [3];	// midi out buffer for KBD
-int kbd_list_index = 0;				// index in the list
-uint8_t out_list [LIST_ELT] [3];	// midi out buffer for OUT (to fluidsynth)
-int out_list_index = 0;				// index in the list
-uint8_t clk_list [LIST_ELT] [3];	// clock out buffer for CLK (to external system)
-int clk_list_index = 0;				// index in the list
+uint8_t ui_list [LIST_ELT] [3];			// midi out buffer for UI
+int ui_list_index = 0;					// index in the list
+uint8_t kbd_list [LIST_ELT] [3];		// midi out buffer for KBD
+int kbd_list_index = 0;					// index in the list
+uint8_t out_list [LIST_ELT] [3];		// midi out buffer for OUT (to fluidsynth)
+int out_list_index = 0;					// index in the list
+uint8_t clk_list [LIST_ELT] [3];		// clock out buffer for CLK (to external system)
+int clk_list_index = 0;					// index in the list
+uint8_t kbd_clk_list [LIST_ELT] [3];	// clock out buffer for KBD_CLK (to keyboard)
+int kbd_clk_list_index = 0;				// index in the list
 
 // select functionality
 int ui_limit1;

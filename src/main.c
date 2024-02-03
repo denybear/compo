@@ -30,10 +30,12 @@ static void init_globals ( )
 	kbd_list_index = 0;
 	out_list_index = 0;
 	clk_list_index = 0;
+	kbd_clk_list_index = 0;
 	memset (ui_list, 0, LIST_ELT * 3);
 	memset (kbd_list, 0, LIST_ELT * 3);
 	memset (out_list, 0, LIST_ELT * 3);
 	memset (clk_list, 0, LIST_ELT * 3);
+	memset (kbd_clk_list, 0, LIST_ELT * 3);
 	// empty song structure
 	memset (song, 0, SONG_SIZE * sizeof (note_t));
 	// empty copy_buffer structure and corresponding led structure
@@ -129,6 +131,7 @@ void jack_shutdown ( void *arg )
 	free (midi_KBD_out);
 	free (midi_out);
 	free (clock_out);
+	free (clock_KBD_out);
 
 	exit ( 1 );
 }
@@ -241,9 +244,19 @@ int main ( int argc, char *argv[] )
 		exit ( 1 );
 	}
 
-	/* register clock-out port: this port will send the midi cloc events to external systems */
+	/* register clock-out port: this port will send the midi clock events to external systems */
 	clock_out = jack_port_register (client, "clock_out", JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
 	if (clock_out == NULL ) {
+		fprintf ( stderr, "no more JACK CLOCK ports available.\n" );
+		// JACK client close
+		jack_client_close ( client );
+		exit ( 1 );
+	}
+
+	/* register clock-KBD-out port: this port will send the midi clock events to midi keyboard */
+	/* it sends clock only in play mode */
+	clock_KBD_out = jack_port_register (client, "clock_KBD_out", JACK_DEFAULT_MIDI_TYPE, JackPortIsOutput, 0);
+	if (clock_KBD_out == NULL ) {
 		fprintf ( stderr, "no more JACK CLOCK ports available.\n" );
 		// JACK client close
 		jack_client_close ( client );
@@ -309,7 +322,7 @@ int main ( int argc, char *argv[] )
 	if ( jack_connect ( client, "compo.a:clock_out", "a2j:Circuit (playback): Circuit MIDI 1") ) {
 			fprintf ( stderr, "cannot connect ports (between client and server): CLK out (Novation)\n" );
 	}
-	if ( jack_connect ( client, "compo.a:clock_out", "a2j:MPK Mini Mk II (playback): MPK Mini Mk II MIDI 1") ) {
+	if ( jack_connect ( client, "compo.a:clock_KBD_out", "a2j:MPK Mini Mk II (playback): MPK Mini Mk II MIDI 1") ) {
 			fprintf ( stderr, "cannot connect ports (between client and server): CLK out (Akai)\n" );
 	}
 

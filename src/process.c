@@ -170,6 +170,29 @@ int process ( jack_nframes_t nframes, void *arg )
 	}
 
 
+	/*****************************************************************************************/
+	/* Second (ter), process CLOCK KBD out events (midi clock, but only when play is active) */
+	/*****************************************************************************************/
+
+	// determine if clock shall be sent or not (play shall be active)
+	if (send_clock_tick && is_play) {
+		buffer [0] = MIDI_CLOCK;
+		push_to_list (KBD_CLK, buffer);	// put in midisend buffer to change channel volume
+	}
+
+	// define midi out port to write to
+	midiout = jack_port_get_buffer (clock_KBD_out, nframes);
+
+	// clear midi write buffer
+	jack_midi_clear_buffer (midiout);
+
+	//go through the list of midi requests
+	while (pull_from_list (KBD_CLK, buffer)) {
+		// send midi stream
+		midi_write (midiout, 0, buffer);
+	}
+
+
 	/****************************************/
 	/* Third, process MIDI out (KBD) events */
 	/****************************************/

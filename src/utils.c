@@ -82,6 +82,10 @@ int push_to_list (int device, uint8_t * buffer) {
 			index = &clk_list_index;
 			list = &clk_list[0][0];
 			break;
+		case KBD_CLK:
+			index = &kbd_clk_list_index;
+			list = &kbd_clk_list[0][0];
+			break;
 	}
 
 	for (i = 0; i < 3; i++) {
@@ -117,6 +121,10 @@ int pull_from_list (int device, uint8_t * buffer) {
 		case CLK:
 			index = &clk_list_index;
 			list = &clk_list[0][0];
+			break;
+		case KBD_CLK:
+			index = &kbd_clk_list_index;
+			list = &kbd_clk_list[0][0];
 			break;
 	}
 
@@ -214,7 +222,7 @@ int compute_bbt (jack_nframes_t nframes, jack_position_t *pos, int new_pos)
 		if (pos->bar >= 512) pos->bar = pos->bar % 512;		// 512 = 64 bar * 8 pages; we loop after 512 bars
 
 		// determine if clock signal shall be sent
-		clock_tick = (int) ((pos->tick * 24) / (int) ticks_per_bar);		// 24 ticks per quarter note
+		clock_tick = (int) ((pos->tick * 24 * 4) / (int) ticks_per_bar);		// 24 ticks per quarter note (hence 24 * 4)
 		if (clock_tick == previous_clock_tick) return (FALSE);
 		previous_clock_tick = clock_tick;
 		return (TRUE);
