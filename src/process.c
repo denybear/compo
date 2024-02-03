@@ -803,6 +803,8 @@ void bar_process (int mode) {
 				// save copy-paste buffer (as we will use it for insert/remove bars)
 				memcpy (save_copy_buffer, copy_buffer, COPY_SIZE * sizeof (note_t));
 				save_copy_length = copy_length;
+				memcpy (save_led_copy_buffer, led_copy_buffer, 512 * sizeof (uint8_t));
+				save_led_copy_length = led_copy_length;
 
 				// insert or remove X bars at the given position
 				if (mode == INSERT) {		// INSERT bars
@@ -845,6 +847,8 @@ void bar_process (int mode) {
 				// restore copy-paste buffer (as it could be full of usefull stuff)
 				memcpy (copy_buffer, save_copy_buffer, COPY_SIZE * sizeof (note_t));
 				copy_length = save_copy_length;
+				memcpy (led_copy_buffer, save_led_copy_buffer, 512 * sizeof (uint8_t));
+				led_copy_length = save_led_copy_length;
 				break;
 			case COLOR:
 				// change color of bars to their next color
