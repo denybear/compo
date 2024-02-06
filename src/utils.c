@@ -251,6 +251,65 @@ uint32_t quantize (uint32_t tick, int quant) {
 }
 
 
+// quantize note, based on other notes that are in the song already
+// returns TRUE to indicate if the note shall be played straight ahead (ie. note has been quantized "in the past") or FALSE to indicate it shall be played later on
+// 2 quantizer values can be provided: one for notes on, one for notes off
+int quantize_note (int quant_noteon, int quant_noteoff, note_t *note) {
+
+	int i, found;
+	uint32_t tick_on, qtick_on;			// temp structure to store tick info
+	uint32_t tick_off, qtick_off;		// temp structure to store tick info
+	int tick_difference, qtick_difference;
+
+	// go through the whole song backwards and check whether there is another note with the same instrument
+	i = song_length;
+	found = FALSE;
+	while (i > 0) {
+		i--;
+		if (((note->status == MIDI_NOTEON) && (song[i].instrument == note->instrument) && (song[i].status == MIDI_NOTEON)) || 
+			((note->status == MIDI_NOTEOFF) && (song[i].instrument == note->instrument) && (song[i].status == MIDI_NOTEON) && (song[i].key == note->key))){
+			// another note (with same instrument) has been found; leave loop
+			found = TRUE;
+			break;
+		}
+	}
+
+	if (found) {
+		// a previous note-on has been found with the same instrument, and its index is i; quantize the time difference between the 2 notes
+		note2tick (song [i], &tick_on, FALSE);			// number of ticks from BBT (0,0,0)
+		note2tick (song [i], &qtick_on, TRUE);			// number of quantized ticks from BBT (0,0,0)
+		note2tick (*note, &tick_off, FALSE);			// number of ticks from BBT (0,0,0)
+		tick_difference = tick_off - qtick_on;
+
+		if (tick_difference < 0) {
+			// negative time difference; align qtick of new note with the qtick of previous note
+			tick_difference = 0;
+		}
+
+		if (note->status == MIDI_NOTEON) {
+			qtick_difference = quantize (tick_difference, quant_noteon);				// quantized time difference between the 2 notes-on
+		}
+		else {																			// note-off
+			qtick_difference = quantize (tick_difference, quant_noteoff);				// quantized time difference between the note-on and note-off
+			if (qtick_difference > 0) qtick_difference--; 								// in case qtick difference is > 0, then decrease of 1 to avoid note-off to be on a new beat/bar
+		}
+		qtick_off = qtick_difference + qtick_on;										// add to quantized BBT of previous note, and store to quantized BBT of current note
+		tick2note (qtick_off, note, TRUE);												// store to quantized BBT of current note
+	}
+	else {
+		// no previous note-on has been found with the same instrument; just simple quantize the note
+		note2tick (*note, &tick_off, FALSE);												// number of ticks from BBT (0,0,0)
+		if (note->status == MIDI_NOTEON) qtick_off = quantize (tick_off, quant_noteon);		// quantized notes-on
+		else qtick_off = quantize (tick_off, quant_noteoff);								// quantized note-off
+		tick2note (qtick_off, note, TRUE);													// store to qBBT of the song's note
+	}
+
+	// test if quantized note is to be played in the past or in the future
+	if (qtick_off <= tick_off) return TRUE;			// note should have been played in the past: we play it straight
+	return FALSE;									// play note later
+}
+
+
 // go through the whole song and quantize the notes; notes-on are quantized according to quant_noteon parameter
 // duration between notes-on and notes-off are quantized according to quant_noteoff parameter
 void quantize_song (int quant_noteon) {
@@ -261,6 +320,8 @@ void quantize_song (int quant_noteon) {
 	uint32_t tick_off, qtick_off;		// temp structure to store tick info
 	int tick_difference, qtick_difference;
 
+	if (song_length == 0) return;		// make sure song exists
+
 /*
 // COMPLEX QUANTIZATION ROUTINE BELOW !!!
 	// how quantization is done:
@@ -270,8 +331,6 @@ void quantize_song (int quant_noteon) {
 	// then, song is scanned again to find the corresponding note-off to a note-on
 	// Note-off is quantized according its relative timing compared to corresponding note-on (ie. time difference)
 	// another processing is done for note-off, to make sure a new bar never starts with note-off (useful for copy-paste). This consist in decrementing quantized value for note-offs
-
-	if (song_length == 0) return;		// make sure song exists
 
 	// go instrument by instrument
 	for (j = 0; j <  8; j++) {

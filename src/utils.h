@@ -14,6 +14,7 @@ int pull_from_list (int, uint8_t *);
 int midi_write (void *, jack_nframes_t, jack_midi_data_t *);
 int compute_bbt (jack_nframes_t, jack_position_t *, int);
 uint32_t quantize (uint32_t, int);
+int quantize_note (int, int, note_t *);
 void quantize_song (int);
 void note2tick (note_t, uint32_t *, int);
 void tick2note (uint32_t, note_t *, int);

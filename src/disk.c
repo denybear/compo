@@ -403,7 +403,7 @@ void get_colors_from_ui () {
 	int i;
 
 	for (i = 0; i < song_length; i++) {
-		song [i].color = ui_bars [song[i].instrument][(song[i].bar / 64)][(song[i].bar % 64)];
+		song [i].color = ui_bars [song[i].instrument][(song[i].qbar / 64)][(song[i].qbar % 64)];
 	}
 }
 
@@ -417,6 +417,6 @@ void set_colors_to_ui () {
 	memset (ui_bars, BLACK, 8 * 8 * 64);
 
 	for (i = 0; i < song_length; i++) {
-		ui_bars [song[i].instrument][song[i].bar / 64][song[i].bar % 64] = song [i].color;
+		ui_bars [song[i].instrument][song[i].qbar / 64][song[i].qbar % 64] = song [i].color;
 	}
 }

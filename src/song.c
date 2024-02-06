@@ -16,7 +16,8 @@
 // write a note to song structure; insert it to the right place
 // song structure is sorted by bar, beat, tick; then by instrument
 // this means the song structure is sorted every time a new note is written
-void write_to_song (note_t note) {
+// if quantized == TRUE, then writing is done according quantized notes, otherwise true timings are used
+void write_to_song (note_t note, int quantized) {
 
 	int i;
 	int bar_limit1, bar_limit2;
@@ -38,18 +39,34 @@ void write_to_song (note_t note) {
 	////////////
 	// go through the song to locate the right bar; stop if we found the right bar or next bar
 	for (i=0; i<song_length; i++) {
-		if (song [i].bar >= note.bar) {
-			bar_limit1 = i;		// limit1 is either the first "same" bar, or first "higher" bar
-			break;
+		if ((quantized) && (song [i].qbar != 0xFFFF)) {		// get quantized value or not
+			if (song [i].qbar >= note.qbar) {
+				bar_limit1 = i;		// limit1 is either the first "same" bar, or first "higher" bar
+				break;
+			}
+		}
+		else {
+			if (song [i].bar >= note.bar) {
+				bar_limit1 = i;		// limit1 is either the first "same" bar, or first "higher" bar
+				break;
+			}
 		}
 	}
 	// test if we reached song boundary without success: in this case, limit1 is at the end of the song
 	if (i==song_length) bar_limit1 = i;
 
 	for (i=0; i<song_length; i++) {
-		if (song [i].bar > note.bar) {
-			bar_limit2 = i;		// limit2 is the first "higher" bar
-			break;
+		if ((quantized) && (song [i].qbar != 0xFFFF)) {		// get quantized value or not
+			if (song [i].qbar > note.qbar) {
+				bar_limit2 = i;		// limit2 is the first "higher" bar
+				break;
+			}
+		}
+		else {
+			if (song [i].bar > note.bar) {
+				bar_limit2 = i;		// limit2 is the first "higher" bar
+				break;
+			}
 		}
 	}
 	// test if we reached song boundary without success: in this case, limit2 is at the end of the song
@@ -72,18 +89,34 @@ void write_to_song (note_t note) {
 	// note to insert is between bar_limit1 and bar_limit2
 	// go through the song (between limit1 and limit 2) to locate the right tick; stop if we found the right tick or next tick
 	for (i=bar_limit1; i<bar_limit2; i++) {
-		if (song [i].tick >= note.tick) {
-			tick_limit1 = i;		// limit1 is either the first "same" tick, or first "higher" tick in the bar
-			break;
+		if ((quantized) && (song [i].qtick != 0xFFFF)) {		// get quantized value or not
+			if (song [i].qtick >= note.qtick) {
+				tick_limit1 = i;		// limit1 is either the first "same" tick, or first "higher" tick in the bar
+				break;
+			}
+		}
+		else {
+			if (song [i].tick >= note.tick) {
+				tick_limit1 = i;		// limit1 is either the first "same" tick, or first "higher" tick in the bar
+				break;
+			}
 		}
 	}
 	// test if we reached bar boundary without success: in this case, limit1 is at the bar boundary
 	if (i==bar_limit2) tick_limit1 = i;
 
 	for (i=bar_limit1; i<bar_limit2; i++) {
-		if (song [i].tick > note.tick) {
-			tick_limit2 = i;		// limit2 is the first "higher" tick of the bar
-			break;
+		if ((quantized) && (song [i].qtick != 0xFFFF)) {		// get quantized value or not
+			if (song [i].qtick > note.qtick) {
+				tick_limit2 = i;		// limit2 is the first "higher" tick of the bar
+				break;
+			}
+		}
+		else {
+			if (song [i].tick > note.tick) {
+				tick_limit2 = i;		// limit2 is the first "higher" tick of the bar
+				break;
+			}
 		}
 	}
 	// test if we reached song boundary without success: in this case, limit2 is at the boundary
@@ -352,71 +385,101 @@ void test_write () {
 	note.bar =5;
 	note.beat =1;
 	note.tick =480;
+	note.qbar =5;
+	note.qbeat =1;
+	note.qtick =480;
 	note.instrument =1;
-	write_to_song (note);
+	write_to_song (note, TRUE);
 	display_song (song_length, song, "test: insert 1st note in song");
 
 	note.bar =6;
 	note.beat =0;
 	note.tick =0;
+	note.qbar =6;
+	note.qbeat =0;
+	note.qtick =0;
 	note.instrument =2;
-	write_to_song (note);
+	write_to_song (note, TRUE);
 	display_song (song_length, song, "insert note at end of song");
 
 	note.bar =3;
 	note.beat =2;
 	note.tick =960;
+	note.qbar =3;
+	note.qbeat =2;
+	note.qtick =960;
 	note.instrument =2;
-	write_to_song (note);
+	write_to_song (note, TRUE);
 	display_song (song_length, song, "insert note at beginning of song");
 
 	note.bar =4;
 	note.beat =2;
 	note.tick =960;
+	note.qbar =4;
+	note.qbeat =2;
+	note.qtick =960;
 	note.instrument =2;
-	write_to_song (note);
+	write_to_song (note, TRUE);
 	display_song (song_length, song, "insert note between 2 bars");
 
 	note.bar =4;
 	note.beat =2;
 	note.tick =960;
+	note.qbar =4;
+	note.qbeat =2;
+	note.qtick =960;
 	note.instrument =2;
-	write_to_song (note);
+	write_to_song (note, TRUE);
 	display_song (song_length, song, "insert note same as previous");
 
 	note.bar =4;
 	note.beat =2;
 	note.tick =961;
+	note.qbar =4;
+	note.qbeat =2;
+	note.qtick =961;
 	note.instrument =7;
-	write_to_song (note);
+	write_to_song (note, TRUE);
 	display_song (song_length, song, "insert note same bar, higher tick");
 
 	note.bar =4;
 	note.beat =1;
 	note.tick =959;
+	note.qbar =4;
+	note.qbeat =1;
+	note.qtick =959;
 	note.instrument =7;
-	write_to_song (note);
+	write_to_song (note, TRUE);
 	display_song (song_length, song, "insert note same bar, lower tick");
 
 	note.bar =4;
 	note.beat =2;
 	note.tick =960;
+	note.bar =4;
+	note.beat =2;
+	note.tick =960;
 	note.instrument =3;
-	write_to_song (note);
+	write_to_song (note, TRUE);
 	display_song (song_length, song, "insert note same as previous, with higher instr");
 
 	note.bar =4;
 	note.beat =2;
 	note.tick =960;
+	note.bar =4;
+	note.beat =2;
+	note.tick =960;
 	note.instrument =0;
-	write_to_song (note);
+	write_to_song (note, TRUE);
 	display_song (song_length, song, "insert note same as previous, with lower instr");
 
 	note.bar =6;
 	note.beat =3;
 	note.tick =1440;
+	note.qbar =6;
+	note.qbeat =3;
+	note.qtick =1440;
 	note.instrument =2;
-	write_to_song (note);
+	write_to_song (note, TRUE);
 	display_song (song_length, song, "insert note at end of song");
 
 }
@@ -487,7 +550,7 @@ void copy_cut (u_int16_t b_limit1, u_int16_t b_limit2, int instr, int mode) {
 				// copy the note to the copy buffer
 				memcpy (&copy_buffer [copy_length], &note [i], sizeof (note_t));		// no issue in using memcpy as memory should not overlap
 				// correct the bar number in copy buffer so bar_limit1 is now 0
-				copy_buffer [copy_length].bar = copy_buffer [copy_length].bar - b_limit1;
+				copy_buffer [copy_length].qbar = copy_buffer [copy_length].qbar - b_limit1;
 				copy_length++;
 			}
 
@@ -555,7 +618,7 @@ void paste (u_int16_t b_limit1, int instr) {
 
 	// erase the content of bars before pasting new stuff: we don't do overdubbing when pasting
 	// you can remove this section to do paste + overdubbing (without erasing bars first)
-	b_limit2 = (copy_buffer [copy_length - 1].bar) + 1 + b_limit1;		// b_limit2 is last bar in copy buffer + 1 (as it is exclusive)
+	b_limit2 = (copy_buffer [copy_length - 1].qbar) + 1 + b_limit1;		// b_limit2 is last bar in copy buffer + 1 (as it is exclusive)
 	copy_cut (b_limit1, b_limit2, instr, DEL);				// erase corresponding bars in the song
 	// stop removing here
 
@@ -563,10 +626,10 @@ void paste (u_int16_t b_limit1, int instr) {
 		// take note from copy_buffer and store it in a temporary space
 		memcpy (&note, &copy_buffer [i], sizeof (note_t));
 		// correct bar so it matches to destination bar, correct instrument to match destination instrument
-		note.bar += b_limit1;
+		note.qbar += b_limit1;
 		note.instrument = instr;
 		// add to song
-		write_to_song (note);
+		write_to_song (note, TRUE);
 	}
 }
 
@@ -589,9 +652,9 @@ void create_metronome () {
 		note.bar = i;
 		note.beat = 0;
 		note.tick = (uint16_t) (0);
-		note.qbar = 0xFFFF;				// no need for quantized values, as regular BBT values are already quantized
-		note.qbeat = 0xFF;
-		note.qtick = 0xFFFF;
+		note.qbar = note.bar;
+		note.qbeat = note.beat;
+		note.qtick = note.tick;
 		note.status = MIDI_NOTEON;
 		note.key = 76;							// high wood block
 		note.vel = DEFAULT_METRONOME_VELOCITY;	// max velocity
@@ -599,37 +662,44 @@ void create_metronome () {
 
 		// note 1 off
 		note.tick = (uint16_t) (half_time_ticks_per_beat);
+		note.qtick = note.tick;
 		note.status = MIDI_NOTEOFF;
 		memcpy (&metronome [(i*8) + 1], &note, sizeof (note_t));
 
 		// note 2 on
 		note.tick = (uint16_t) (time_ticks_per_beat);
+		note.qtick = note.tick;
 		note.status = MIDI_NOTEON;
 		note.key = 77;					// low wood block
 		memcpy (&metronome [(i*8) + 2], &note, sizeof (note_t));
 
 		// note 2 off
 		note.tick = (uint16_t) (time_ticks_per_beat + half_time_ticks_per_beat);
+		note.qtick = note.tick;
 		note.status = MIDI_NOTEOFF;
 		memcpy (&metronome [(i*8) + 3], &note, sizeof (note_t));
 
 		// note 3 on
 		note.tick = (uint16_t) (2 * time_ticks_per_beat);
+		note.qtick = note.tick;
 		note.status = MIDI_NOTEON;
 		memcpy (&metronome [(i*8) + 4], &note, sizeof (note_t));
 
 		// note 3 off
 		note.tick = (uint16_t) ((2 * time_ticks_per_beat) + half_time_ticks_per_beat);
+		note.qtick = note.tick;
 		note.status = MIDI_NOTEOFF;
 		memcpy (&metronome [(i*8) + 5], &note, sizeof (note_t));
 
 		// note 4 on
 		note.tick = (uint16_t) (3 * time_ticks_per_beat);
+		note.qtick = note.tick;
 		note.status = MIDI_NOTEON;
 		memcpy (&metronome [(i*8) + 6], &note, sizeof (note_t));
 
 		// note 4 off
 		note.tick = (uint16_t) ((3 * time_ticks_per_beat) + half_time_ticks_per_beat);
+		note.qtick = note.tick;
 		note.status = MIDI_NOTEOFF;
 		memcpy (&metronome [(i*8) + 7], &note, sizeof (note_t));
 	}

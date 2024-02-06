@@ -487,6 +487,7 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 
 	uint8_t buffer [4];
 	note_t note;
+	int playnow;
 
 
 	buffer [0] = event->buffer [0];
@@ -498,6 +499,49 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 		case MIDI_NOTEOFF:
 		case MIDI_NOTEON:
 
+			// fill-in note structure
+			note.instrument = ui_current_instrument;
+			note.bar = time_position.bar;
+			note.beat = time_position.beat;
+			note.tick = time_position.tick;
+			note.qbar = 0xFFFF;					// no quantization yet
+			note.qbeat = 0xFF;
+			note.qtick = 0xFFFF;
+			note.status = buffer [0] & 0xF0;	// midi command only, no midi channel (it is set at play time)
+			note.key = buffer [1];
+			note.vel = buffer [2];
+
+			// play the music straight, except if we are in play mode + recording, and that note should be played in the future
+			// this will fill the qbar/qbeat/qtick fields of the structure
+			playnow = quantize_note (EIGHTH, SIXTEENTH, &note);
+
+			if (is_record && is_play) {			// record note
+				// write to song, with quantized values
+				write_to_song (note, TRUE);
+				// we have recorded something in the bar : set bar to a color
+				if (ui_bars [ui_current_instrument][note.qbar / 64][note.qbar % 64] == BLACK) {
+					ui_bars [ui_current_instrument][note.qbar / 64][note.qbar % 64] = LO_YELLOW;
+				}
+			}
+
+			// in case we shall play the note now (while playing and recording), play it
+			// in case we don't play or don't record, play it straight as well
+			if (!is_record || !is_play || playnow) {
+				// play the music straight
+				// get midi channel from instrument number, and assign it to midi command
+				buffer [0] = (buffer [0] & 0xF0) | (instr2chan (ui_current_instrument, midi_mode));
+				// play note only if note should be played (mute, solo, etc) or not note on
+				// means : we play notes off all the time, even if channel is muted 
+				if (should_play (ui_current_instrument) || ((buffer [0] & 0xF0) != MIDI_NOTEON)) {
+
+					// adjust velocity in case of fixed velocity && note-on
+					if ((is_velocity) && ((buffer [0] & 0xF0) == MIDI_NOTEON)) buffer [2] = DEFAULT_VELOCITY;
+					push_to_list (OUT, buffer);	// put in midisend buffer to play the note straight !
+				}
+			}
+
+
+/*
 			// play the music straight
 			// get midi channel from instrument number, and assign it to midi command
 			buffer [0] = (buffer [0] & 0xF0) | (instr2chan (ui_current_instrument, midi_mode));
@@ -525,13 +569,15 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 				note.status = buffer [0] & 0xF0;		// midi command only, no midi channel (it is set at play time)
 				note.key = buffer [1];
 				note.vel = buffer [2];
-				write_to_song (note);
+				write_to_song (note, FALSE);
 
 				// we have recorded something in the bar : set bar to a color
 				if (ui_bars [ui_current_instrument][note.bar / 64][note.bar % 64] == BLACK) {
 					ui_bars [ui_current_instrument][note.bar / 64][note.bar % 64] = LO_YELLOW;
 				}
 			}
+*/			
+			
 			break;
 
 		case MIDI_CC:
@@ -583,7 +629,9 @@ int ui_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 					break;
 				case HI_RED:
 					// the pad was selected before but was solo; next move is put to hi yellow (active)
-					ui_instruments [key] = HI_YELLOW;
+					// we don't do "hi-yellow" anymore: change of instrument is done differently
+					// ui_instruments [key] = HI_YELLOW;
+					ui_instruments [key] = HI_GREEN;
 					break;
 				case HI_YELLOW:
 					// the pad was selected before (choice of instr); next move is put to hi amber (active)

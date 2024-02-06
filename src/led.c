@@ -184,8 +184,8 @@ void note2bar_color () {
 	for (i = 0; i <song_length; i++) {
 		// get bar number
 		instr = song [i].instrument;
-		page = song [i].bar / 64;		// 64 bars per page
-		bar = song [i].bar % 64;
+		page = song [i].qbar / 64;		// 64 bars per page
+		bar = song [i].qbar % 64;
 
 		ui_bars [instr][page][bar] = song [i].color;	// set to the right color
 	}
@@ -201,8 +201,8 @@ void bar2note_color () {
 	for (i = 0; i <song_length; i++) {
 		// get bar number
 		instr = song [i].instrument;
-		page = song [i].bar / 64;		// 64 bars per page
-		bar = song [i].bar % 64;
+		page = song [i].qbar / 64;		// 64 bars per page
+		bar = song [i].qbar % 64;
 
 		song [i].color = ui_bars [instr][page][bar];	// set to the right color
 	}
