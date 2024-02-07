@@ -20,8 +20,60 @@
 void write_to_song (note_t note, int quantized) {
 
 	int i;
+	int note_bar, note_tick, note_status, song_bar, song_tick, song_status;
+
+	// special case if song is too large : just do nothing and leave
+	if (song_length >= SONG_SIZE) return;
+
+	// fill temp variables (for easier reading)
+	note_bar = note.bar;
+	note_tick = note.tick;
+	note_status = note.status;
+	if (quantized) {		// get quantized value or not
+		if (note.qbar != 0xFFFF) note_bar = note.qbar;
+		if (note.qtick != 0xFFFF) note_tick = note.qtick;
+	}
+
+	for (i = 0; i < song_length; i++) {
+
+		// fill temp variables (for easier reading)
+		song_bar = song [i].bar;
+		song_tick = song [i].tick;
+		song_status = song [i].status;
+		if (quantized) {		// get quantized value or not
+			if (song [i].qbar != 0xFFFF) song_bar = song [i].qbar;
+			if (song [i].qtick != 0xFFFF) song_tick = song [i].qtick;
+		}
+
+		// check the bar first
+		if (song_bar < note_bar) continue;		// if bar in song is too small, then next loop
+		if (song_bar > note_bar) break;			// if bar in song is too high, then leave
+
+		// note bar == song bar
+		// check the tick
+		if (song_tick < note_tick) continue;	// if tick in song is too small, then next loop
+		if (song_tick > note_tick) break;		// if tick in song is too high, then leave
+
+		// note tick == song tick
+		// check the status
+		// we want to sort this way: NOTE_ON (0x90), then NOTE_OFF (0x80)
+		if (song_status > note_status) continue;	// if note status is higher (ie. note on found when you have note off to insert) then next loop
+		break;										// leave
+	}
+
+	// i is the index where the note shall be inserted in the song
+	// move rest of song 1 note ahead (to the right)
+	if (song_length > 0) memmove (&song [i + 1], &song [i], (song_length - i) * sizeof (note_t));	// memmove to prevent memory overlapping
+	// copy note in the empty space
+	memcpy (&song [i], &note, sizeof (note_t));									// memcpy is fine as no overlapping in memory
+	song_length++;
+
+
+/*
+	int i;
 	int bar_limit1, bar_limit2;
 	int tick_limit1, tick_limit2;
+	int qtick_limit1, qtick_limit2;
 	int instrument_limit1, instrument_limit2;
 
 	// special case if song is too large : just do nothing and leave
@@ -82,78 +134,79 @@ void write_to_song (note_t note, int quantized) {
 		return;
 	}
 
-	/////////////
-	// check tick
-	/////////////
+	//////////////
+	// check qtick
+	//////////////
 	// there is no need to check beat, as tick goes from 0 to max_tick in a bar, it is not reset to 0 at each beat
 	// note to insert is between bar_limit1 and bar_limit2
-	// go through the song (between limit1 and limit 2) to locate the right tick; stop if we found the right tick or next tick
+	// go through the song (between limit1 and limit 2) to locate the right quantized tick; stop if we found the right quantized tick or next quantized tick
 	for (i=bar_limit1; i<bar_limit2; i++) {
 		if ((quantized) && (song [i].qtick != 0xFFFF)) {		// get quantized value or not
 			if (song [i].qtick >= note.qtick) {
-				tick_limit1 = i;		// limit1 is either the first "same" tick, or first "higher" tick in the bar
+				qtick_limit1 = i;		// limit1 is either the first "same" tick, or first "higher" tick in the bar
 				break;
 			}
 		}
 		else {
 			if (song [i].tick >= note.tick) {
-				tick_limit1 = i;		// limit1 is either the first "same" tick, or first "higher" tick in the bar
+				qtick_limit1 = i;		// limit1 is either the first "same" tick, or first "higher" tick in the bar
 				break;
 			}
 		}
 	}
 	// test if we reached bar boundary without success: in this case, limit1 is at the bar boundary
-	if (i==bar_limit2) tick_limit1 = i;
+	if (i==bar_limit2) qtick_limit1 = i;
 
 	for (i=bar_limit1; i<bar_limit2; i++) {
 		if ((quantized) && (song [i].qtick != 0xFFFF)) {		// get quantized value or not
 			if (song [i].qtick > note.qtick) {
-				tick_limit2 = i;		// limit2 is the first "higher" tick of the bar
+				qtick_limit2 = i;		// limit2 is the first "higher" tick of the bar
 				break;
 			}
 		}
 		else {
 			if (song [i].tick > note.tick) {
-				tick_limit2 = i;		// limit2 is the first "higher" tick of the bar
+				qtick_limit2 = i;		// limit2 is the first "higher" tick of the bar
 				break;
 			}
 		}
 	}
 	// test if we reached song boundary without success: in this case, limit2 is at the boundary
-	if (i==bar_limit2) tick_limit2 = i;
+	if (i==bar_limit2) qtick_limit2 = i;
 
 	// in case limit1 == limit2, it means there is no similar tick in the bar yet; we can insert the note and leave
-	if (tick_limit1 == tick_limit2) {
+	if (qtick_limit1 == qtick_limit2) {
 		// move rest of song 1 note ahead (to the right)
-		memmove (&song [tick_limit1 + 1], &song [tick_limit1], (song_length - tick_limit1) * sizeof (note_t));		// memmove to prevent memory overlapping
+		memmove (&song [qtick_limit1 + 1], &song [qtick_limit1], (song_length - qtick_limit1) * sizeof (note_t));		// memmove to prevent memory overlapping
 		// copy note in the empty space
-		memcpy (&song [tick_limit1], &note, sizeof (note_t));		// memcpy is fine as no overlapping in memory
+		memcpy (&song [qtick_limit1], &note, sizeof (note_t));		// memcpy is fine as no overlapping in memory
 		song_length++;
 		return;
 	}
+
 
 	//////////////
 	// check instr
 	//////////////
 	// at this stage, note should be between tick_limit1 (first note bearing the same tick) and tick_limit2 (first note bearing the next, higher tick)
 	// now we want to sort the notes by instrument, because we can!
-	for (i=tick_limit1; i<tick_limit2; i++) {
+	for (i=qtick_limit1; i<qtick_limit2; i++) {
 		if (song [i].instrument >= note.instrument) {
 			instrument_limit1 = i;		// limit1 is either the first "same" instr, or first "higher" instr in the tick
 			break;
 		}
 	}
 	// test if we reached tick boundary without success: in this case, limit1 is at the tick boundary
-	if (i==tick_limit2) instrument_limit1 = i;
+	if (i==qtick_limit2) instrument_limit1 = i;
 
-	for (i=tick_limit1; i<tick_limit2; i++) {
+	for (i=qtick_limit1; i<qtick_limit2; i++) {
 		if (song [i].instrument > note.instrument) {
 			instrument_limit2 = i;		// limit2 is the first "higher" instrument of the tick
 			break;
 		}
 	}
 	// test if we reached song boundary without success: in this case, limit2 is at the boundary
-	if (i==bar_limit2) instrument_limit2 = i;
+	if (i==qtick_limit2) instrument_limit2 = i;
 
 	// in any case, we insert the note at limit1; either it is the right instrument already, either there is no other note with the same instrument and we can insert anyway
 	if (instrument_limit1 == instrument_limit1) {		// useless, but this is to keep the same structure as the previous 2 other sections
@@ -166,6 +219,8 @@ void write_to_song (note_t note, int quantized) {
 	}
 
 	return;
+*/
+
 }
 
 

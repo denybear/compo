@@ -251,6 +251,13 @@ uint32_t quantize (uint32_t tick, int quant) {
 }
 
 
+// returns the smallest possible number of ticks for a value of quantizer
+uint32_t min_time (int quant) {
+	if ((quant == 0) || (quant == FREE_TIMING)) return 1;
+	return (int)(time_ticks_per_beat / quant);
+}
+
+
 // quantize note, based on other notes that are in the song already
 // returns TRUE to indicate if the note shall be played straight ahead (ie. note has been quantized "in the past") or FALSE to indicate it shall be played later on
 // 2 quantizer values can be provided: one for notes on, one for notes off
@@ -291,7 +298,8 @@ int quantize_note (int quant_noteon, int quant_noteoff, note_t *note) {
 		}
 		else {																			// note-off
 			qtick_difference = quantize (tick_difference, quant_noteoff);				// quantized time difference between the note-on and note-off
-			if (qtick_difference > 0) qtick_difference--; 								// in case qtick difference is > 0, then decrease of 1 to avoid note-off to be on a new beat/bar
+			if (qtick_difference == 0) qtick_difference = min_time (quant_noteoff);		// no timing difference between note-off and previous note-on: add the smallest time difference possible, based on quantizer
+			qtick_difference--; 														// decrement qtick difference to avoid note-off to be on a new beat/bar
 		}
 		qtick_off = qtick_difference + qtick_on;										// add to quantized BBT of previous note, and store to quantized BBT of current note
 		tick2note (qtick_off, note, TRUE);												// store to quantized BBT of current note

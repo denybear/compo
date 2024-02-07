@@ -372,7 +372,7 @@ int save_to_midi (uint8_t name, char * directory, int quant) {
 		// we use quant parameter to determine whether we should use quantized values or not
 		note2tick (song [i], &tick, quant);			// number of ticks from BBT (0,0,0)
 		if (previous_tick > tick) {
-			fprintf ( stderr, "Error in generating MIDI file : negative delta time\n");		// error message in case delta time is negative
+			fprintf ( stderr, "Error in generating MIDI file : negative delta time (quant is %d)\n", quant);		// error message in case delta time is negative
 			tick = previous_tick;													// set delta time to 0 in this case
 		}
 		delta = tick - previous_tick;				// compute delta time between 2 events; in theory, delta should always be > 0 as note events are sorted by time

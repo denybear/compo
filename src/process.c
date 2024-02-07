@@ -513,7 +513,9 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 
 			// play the music straight, except if we are in play mode + recording, and that note should be played in the future
 			// this will fill the qbar/qbeat/qtick fields of the structure
+printf ("status:%02X, bar:%d, beat:%d, tick:%d, qbar:%d, qbeat:%d, qtick:%d, key:%d\r\n", note.status, note.bar, note.beat, note.tick, note.qbar, note.qbeat, note.qtick, note.key);
 			playnow = quantize_note (EIGHTH, SIXTEENTH, &note);
+printf ("status:%02X, bar:%d, beat:%d, tick:%d, qbar:%d, qbeat:%d, qtick:%d, key:%d\r\n", note.status, note.bar, note.beat, note.tick, note.qbar, note.qbeat, note.qtick, note.key);
 
 			if (is_record && is_play) {			// record note
 				// write to song, with quantized values
