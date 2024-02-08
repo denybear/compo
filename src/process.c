@@ -12,6 +12,7 @@
 #include "led.h"
 #include "song.h"
 #include "disk.h"
+#include "useless.h"
 
 
 // main process callback called at capture of (nframes) frames/samples
@@ -268,11 +269,25 @@ int process ( jack_nframes_t nframes, void *arg )
 			break;
 		case SNUM_3:	// QUANTIFY
 			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
-			is_quantization = is_quantization ? FALSE : TRUE;
-
-			// toggle between quantization and no quantization
-			if (is_quantization) quantize_song (quantizer);
-			else quantize_song (FREE_TIMING);
+			switch (quantizer) {										// change value of quantizer
+				case FREE_TIMING:
+					quantizer = QUARTER;
+					break;
+				case QUARTER:
+					quantizer = EIGHTH;
+					break;
+				case EIGHTH:
+					quantizer = SIXTEENTH;
+					break;
+				case SIXTEENTH:
+					quantizer = THIRTY_SECOND;
+					break;
+				case THIRTY_SECOND:
+					quantizer = FREE_TIMING;
+					break;
+				default:
+					break;
+			}
 			break;
 		case NUM_DOT:	// RECORD
 		case SNUM_DOT:
@@ -514,7 +529,7 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 			// play the music straight, except if we are in play mode + recording, and that note should be played in the future
 			// this will fill the qbar/qbeat/qtick fields of the structure
 printf ("status:%02X, bar:%d, beat:%d, tick:%d, qbar:%d, qbeat:%d, qtick:%d, key:%d\r\n", note.status, note.bar, note.beat, note.tick, note.qbar, note.qbeat, note.qtick, note.key);
-			playnow = quantize_note (EIGHTH, SIXTEENTH, &note);
+			playnow = quantize_note (quantizer, SIXTEENTH, &note);
 printf ("status:%02X, bar:%d, beat:%d, tick:%d, qbar:%d, qbeat:%d, qtick:%d, key:%d\r\n", note.status, note.bar, note.beat, note.tick, note.qbar, note.qbeat, note.qtick, note.key);
 
 			if (is_record && is_play) {			// record note
@@ -540,46 +555,7 @@ printf ("status:%02X, bar:%d, beat:%d, tick:%d, qbar:%d, qbeat:%d, qtick:%d, key
 					if ((is_velocity) && ((buffer [0] & 0xF0) == MIDI_NOTEON)) buffer [2] = DEFAULT_VELOCITY;
 					push_to_list (OUT, buffer);	// put in midisend buffer to play the note straight !
 				}
-			}
-
-
-/*
-			// play the music straight
-			// get midi channel from instrument number, and assign it to midi command
-			buffer [0] = (buffer [0] & 0xF0) | (instr2chan (ui_current_instrument, midi_mode));
-			// play note only if note should be played (mute, solo, etc) or not note on
-			// means : we play notes off all the time, even if channel is muted 
-			if (should_play (ui_current_instrument) || ((buffer [0] & 0xF0) != MIDI_NOTEON)) {
-
-				// adjust velocity in case of fixed velocity && note-on
-				if ((is_velocity) && ((buffer [0] & 0xF0) == MIDI_NOTEON)) buffer [2] = DEFAULT_VELOCITY;
-				push_to_list (OUT, buffer);	// put in midisend buffer to play the note straight !
-			}
-
-			// in case recording is on
-			if (is_record && is_play) {
-				// fill-in note structure
-				note.instrument = ui_current_instrument;
-				note.bar = time_position.bar;
-				note.beat = time_position.beat;
-				note.tick = time_position.tick;
-				note.qbar = 0xFFFF;				// no quantization yet
-				note.qbeat = 0xFF;
-				note.qtick = 0xFFFF;
-
-				// write to song
-				note.status = buffer [0] & 0xF0;		// midi command only, no midi channel (it is set at play time)
-				note.key = buffer [1];
-				note.vel = buffer [2];
-				write_to_song (note, FALSE);
-
-				// we have recorded something in the bar : set bar to a color
-				if (ui_bars [ui_current_instrument][note.bar / 64][note.bar % 64] == BLACK) {
-					ui_bars [ui_current_instrument][note.bar / 64][note.bar % 64] = LO_YELLOW;
-				}
-			}
-*/			
-			
+			}			
 			break;
 
 		case MIDI_CC:

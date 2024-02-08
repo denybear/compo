@@ -11,6 +11,7 @@
 #include "led.h"
 #include "song.h"
 #include "disk.h"
+#include "useless.h"
 
 
 /*************/
@@ -76,7 +77,7 @@ static void init_globals ( )
 	time_bpm_multiplier = 1.0;
 
 	// init quantization engine
-	quantizer = THIRTY_SECOND;
+	quantizer = EIGHTH;
 
 	// create metronome table
 	create_metronome ();
@@ -87,7 +88,6 @@ static void init_globals ( )
 	is_metronome = FALSE;
 	is_load = FALSE;
 	is_save = FALSE;
-	is_quantization = FALSE;				// quantization on/off (free timing)
 	is_velocity = FALSE;					// velocity on/off (fixed)
 	instrument_bank = 0;					// no instrument bank selected yet
 

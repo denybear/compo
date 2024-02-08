@@ -79,7 +79,6 @@ extern int is_record;					// record is in progress
 extern int is_metronome;				// metronome is in progress
 extern int is_save;
 extern int is_load;
-extern int is_quantization;				// quantization on/off (free timing)
 extern int is_velocity;					// velocity on/off (fixed)
 
 

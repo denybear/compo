@@ -12,6 +12,7 @@
 #include "song.h"
 #include "disk.h"
 #include "midiwriter.h"
+#include "useless.h"
 
 
 // in the given directory, look for all the files named between 0x00 and 0x40

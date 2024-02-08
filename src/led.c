@@ -11,6 +11,7 @@
 #include "led.h"
 #include "song.h"
 #include "disk.h"
+#include "useless.h"
 
 
 // returns the color of the "bar" cursor

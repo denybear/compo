@@ -82,7 +82,6 @@ int is_record;						// record is in progress
 int is_metronome;					// metronome is in progress
 int is_save;
 int is_load;
-int is_quantization;				// quantization on/off (free timing)
 int is_velocity;					// velocity on/off (fixed)
 
 // quantization variables
