@@ -327,14 +327,8 @@ int main ( int argc, char *argv[] )
 	}
 
 
-	// assign midi instrument to each channel
-	int default_instr [8] = {0, 0, 2, 16, 33, 27, 48, 61};		// (drum), piano, elec piano, hammond organ, fingered bass, clean guitar, string ensemble, brass ensemble
-	memcpy (instrument_list, default_instr, 8 * sizeof (int));
-	set_instruments ();
-	// set volume for each channel to 64 (mid-volume)
-	int default_vol  [8] = {DEFAULT_VOLUME, DEFAULT_VOLUME, DEFAULT_VOLUME, DEFAULT_VOLUME, DEFAULT_VOLUME, DEFAULT_VOLUME, DEFAULT_VOLUME, DEFAULT_VOLUME};		// volume per channel
-	memcpy (volume_list, default_vol, 8 * sizeof (int));
-	set_volumes ();
+	// set default volumes and instruments
+	set_defaults ();
 
 	// light leds on the UI
 	led_ui_instruments (ON);
@@ -364,14 +358,15 @@ int main ( int argc, char *argv[] )
 		// check if user has typed the LOAD button to load file and a file is selected
 		if ((is_load) && (file_selected != 0xFF))  {
 			init_globals ();			// empty song, etc
-			load (file_selected, DEFAULT_DIR);		// load song
+			if (load (file_selected, DEFAULT_DIR)) set_defaults ();		// load song; if error, then set default volumes & instr
+			else {
+				// set volumes and instruments
+				// assign midi instrument to each channel
+				set_instruments ();
+				// set volume for each channel
+				set_volumes ();
+			}
 			is_load = FALSE;
-
-			// set volumes and instruments
-			// assign midi instrument to each channel
-			set_instruments ();
-			// set volume for each channel
-			set_volumes ();
 
 			// light leds on the UI
 			note2bar_color ();			// set colors to bars

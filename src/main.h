@@ -83,6 +83,7 @@ int is_metronome;					// metronome is in progress
 int is_save;
 int is_load;
 int is_velocity;					// velocity on/off (fixed)
+int is_quantized = TRUE;			// set to false for no quantization
 
 // quantization variables
 int quantizer;							// contains value used for quantization

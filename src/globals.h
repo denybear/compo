@@ -80,6 +80,7 @@ extern int is_metronome;				// metronome is in progress
 extern int is_save;
 extern int is_load;
 extern int is_velocity;					// velocity on/off (fixed)
+extern int is_quantized;				// set to false for no quantization
 
 
 // quantization variables

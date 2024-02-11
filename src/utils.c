@@ -419,3 +419,17 @@ int should_play (int instr) {
 	// if no other instrument is solo, then we should play
 	return TRUE;
 }
+
+
+// set default volumes and instruments
+void set_defaults () {
+
+	// assign midi instrument to each channel
+	int default_instr [8] = {0, 0, 2, 16, 33, 27, 48, 61};		// (drum), piano, elec piano, hammond organ, fingered bass, clean guitar, string ensemble, brass ensemble
+	memcpy (instrument_list, default_instr, 8 * sizeof (int));
+	set_instruments ();
+	// set volume for each channel to 64 (mid-volume)
+	int default_vol  [8] = {DEFAULT_VOLUME, DEFAULT_VOLUME, DEFAULT_VOLUME, DEFAULT_VOLUME, DEFAULT_VOLUME, DEFAULT_VOLUME, DEFAULT_VOLUME, DEFAULT_VOLUME};		// volume per channel
+	memcpy (volume_list, default_vol, 8 * sizeof (int));
+	set_volumes ();
+}

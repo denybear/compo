@@ -23,6 +23,5 @@ void set_instruments ();
 void set_volume (int, int);
 void set_volumes ();
 int should_play (int);
-
-
+void set_defaults ();
 
