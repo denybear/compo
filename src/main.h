@@ -87,6 +87,7 @@ int is_quantized = TRUE;			// set to false for no quantization
 
 // quantization variables
 int quantizer;							// contains value used for quantization
+int quantizer_off;						// contains value used for quantization of notes-off played after a note-on
 
 // tap tempo functionality
 jack_nframes_t tap1, tap2;				// used to calculate tap tempo

@@ -42,8 +42,8 @@ int process ( jack_nframes_t nframes, void *arg )
 	/*********************/
 	if (is_play) {
 
-		// read song to determine whether there are some notes to play; always read quantized value if available
-		notes_to_play = read_from_song (previous_time_position.bar, previous_time_position.tick, time_position.bar, time_position.tick, &lg, TRUE);
+		// read song to determine whether there are some notes to play
+		notes_to_play = read_from_song (previous_time_position.bar, previous_time_position.tick, time_position.bar, time_position.tick, &lg);
 
 		// go through the notes that we shall play
 		for (i=0; i<lg; i++) {
@@ -59,8 +59,8 @@ int process ( jack_nframes_t nframes, void *arg )
 
 		// play metronome
 		if (is_metronome) {
-			// read metronome to determine whether there are some notes to play; ; always read quantized value if available
-			notes_to_play = read_from_metronome (previous_time_position.bar, previous_time_position.tick, time_position.bar, time_position.tick, &lg, TRUE);
+			// read metronome to determine whether there are some notes to play
+			notes_to_play = read_from_metronome (previous_time_position.bar, previous_time_position.tick, time_position.bar, time_position.tick, &lg);
 
 			// go through the notes that we shall play
 			for (i=0; i<lg; i++) {
@@ -268,8 +268,8 @@ int process ( jack_nframes_t nframes, void *arg )
 			is_velocity = is_velocity ? FALSE : TRUE;
 			break;
 		case SNUM_3:	// QUANTIFY
-			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
-			switch (quantizer) {										// change value of quantizer
+			if ((is_load) || (is_save) || (instrument_bank) || (!is_quantized)) break;		// do not process if in load, save or instr selection modes, or in non-quantized mode
+			switch (quantizer) {															// change value of quantizer
 				case FREE_TIMING:
 					quantizer = QUARTER;
 					break;
@@ -519,29 +519,29 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 			note.bar = time_position.bar;
 			note.beat = time_position.beat;
 			note.tick = time_position.tick;
-			note.qbar = 0xFFFF;					// no quantization yet
-			note.qbeat = 0xFF;
-			note.qtick = 0xFFFF;
+			note.qbar = note.bar;				// no quantization yet
+			note.qbeat = note.beat;
+			note.qtick = note.tick;
 			note.status = buffer [0] & 0xF0;	// midi command only, no midi channel (it is set at play time)
 			note.key = buffer [1];
 			note.vel = buffer [2];
 
-			// play the music straight, except if we are in play mode + recording, and that note should be played in the future
-			// this will fill the qbar/qbeat/qtick fields of the structure
-			playnow = quantize_note (quantizer, SIXTEENTH, &note);
+			// this will fill the qbar/qbeat/qtick fields of the structure with quantized values
+			playnow = quantize_note (quantizer, quantizer_off, &note);
 // for debug only
 if (note.status == 0x90) printf ("ON , bar:%03d, beat:%d, tick:%04d, qbar:%03d, qbeat:%d, qtick:%04d, key:%d\r\n", note.bar, note.beat, note.tick, note.qbar, note.qbeat, note.qtick, note.key);
 else printf ("OFF, bar:%03d, beat:%d, tick:%04d, qbar:%03d, qbeat:%d, qtick:%04d, key:%d\r\n", note.bar, note.beat, note.tick, note.qbar, note.qbeat, note.qtick, note.key);
 
 			if (is_record && is_play) {			// record note
 				// write to song, with quantized values
-				write_to_song (note, TRUE);
+				write_to_song (note);
 				// we have recorded something in the bar : set bar to a color
 				if (ui_bars [ui_current_instrument][note.qbar / 64][note.qbar % 64] == BLACK) {
 					ui_bars [ui_current_instrument][note.qbar / 64][note.qbar % 64] = LO_YELLOW;
 				}
 			}
 
+			// play the music straight, except if we are in play mode + recording, and that note should be played in the future
 			// in case we shall play the note now (while playing and recording), play it
 			// in case we don't play or don't record, play it straight as well
 			if (!is_record || !is_play || playnow) {

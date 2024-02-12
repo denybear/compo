@@ -306,8 +306,7 @@ end:
 }
 
 // export to midi
-// if quant is FALSE, then timing values are non-quantized; else, they are quantized
-int save_to_midi (uint8_t name, char * directory, int quant) {
+int save_to_midi (uint8_t name, char * directory) {
 	
 	FILE *out;
 	char filename [100];		// temp structure for file name
@@ -318,8 +317,7 @@ int save_to_midi (uint8_t name, char * directory, int quant) {
 	uint32_t previous_tick, tick, delta;
 
 	// create file path
-	if (quant==FALSE) sprintf (filename, "%s/%02X.mid", directory, name);
-	else sprintf (filename, "%s/%02Xq.mid", directory, name);
+	sprintf (filename, "%s/%02X.mid", directory, name);
 
 	// create file in write mode
 	out = fopen (filename, "wb");
@@ -370,11 +368,10 @@ int save_to_midi (uint8_t name, char * directory, int quant) {
 		chan = instr2chan (song [i].instrument, MIDI_EXPORT);
 
 		// determine delta time between midi event and previous midi event
-		// we use quant parameter to determine whether we should use quantized values or not
-		note2tick (song [i], &tick, quant);			// number of ticks from BBT (0,0,0)
+		note2tick (song [i], &tick, TRUE);			// number of ticks from BBT (0,0,0); we only read "quantized" values (which can be equal to actual BBT values in some cases
 		if (previous_tick > tick) {
-			fprintf ( stderr, "Error in generating MIDI file : negative delta time (quant is %d)\n", quant);		// error message in case delta time is negative
-			tick = previous_tick;													// set delta time to 0 in this case
+			fprintf ( stderr, "Error in generating MIDI file : negative delta time\n");		// error message in case delta time is negative
+			tick = previous_tick;															// set delta time to 0 in this case
 		}
 		delta = tick - previous_tick;				// compute delta time between 2 events; in theory, delta should always be > 0 as note events are sorted by time
 		previous_tick = tick;

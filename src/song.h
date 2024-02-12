@@ -5,10 +5,10 @@
  */
 
 
-void write_to_song (note_t, int);
-note_t* read_from_song (u_int16_t, u_int16_t, u_int16_t, u_int16_t, int*, int);
-note_t* read_from_metronome (u_int16_t, u_int16_t, u_int16_t, u_int16_t, int*, int);
-note_t* read_from (note_t*, int, u_int16_t, u_int16_t, u_int16_t, u_int16_t, int*, int);
+void write_to_song (note_t);
+note_t* read_from_song (u_int16_t, u_int16_t, u_int16_t, u_int16_t, int*);
+note_t* read_from_metronome (u_int16_t, u_int16_t, u_int16_t, u_int16_t, int*);
+note_t* read_from (note_t*, int, u_int16_t, u_int16_t, u_int16_t, u_int16_t, int*);
 void test_copy_paste ();
 void test_write ();
 void test_read ();

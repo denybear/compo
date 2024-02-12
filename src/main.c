@@ -77,7 +77,12 @@ static void init_globals ( )
 	time_bpm_multiplier = 1.0;
 
 	// init quantization engine
+	quantizer_off = SIXTEENTH;
 	quantizer = EIGHTH;
+	if (!is_quantized) {						// in case compilation has been done in non-quantized mode, set quantizers values to free timing
+		quantizer_off = FREE_TIMING;			// in free timing mode, quantization functions return actual tick instead of quantized tick
+		quantizer = FREE_TIMING;
+	}
 
 	// create metronome table
 	create_metronome ();
@@ -380,10 +385,9 @@ int main ( int argc, char *argv[] )
 
 		// check if user has typed the SAVE button to save file
 		if ((is_save) && (file_selected != 0xFF))  {
-			bar2note_color ();						// set colors to notes
-			save (file_selected, DEFAULT_DIR);		// save song
-			save_to_midi (file_selected, DEFAULT_DIR, FALSE);		// save non-quantized midi
-			save_to_midi (file_selected, DEFAULT_DIR, TRUE);		// save quantized midi
+			bar2note_color ();							// set colors to notes
+			save (file_selected, DEFAULT_DIR);			// save song
+			save_to_midi (file_selected, DEFAULT_DIR);	// save midi
 			is_save = FALSE;
 			save_files [file_selected] = TRUE;		// add new file to file list
 

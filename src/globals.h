@@ -85,6 +85,7 @@ extern int is_quantized;				// set to false for no quantization
 
 // quantization variables
 extern int quantizer;						// contains value used for quantization
+extern int quantizer_off;					// contains value used for quantization of notes-off played after a note-on
 
 // tap tempo functionality
 extern jack_nframes_t tap1, tap2;			// used to calculate tap tempo
