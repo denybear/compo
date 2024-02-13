@@ -529,8 +529,8 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 			// this will fill the qbar/qbeat/qtick fields of the structure with quantized values
 			playnow = quantize_note (quantizer, quantizer_off, &note);
 // for debug only
-if (note.status == 0x90) printf ("ON , bar:%03d, beat:%d, tick:%04d, qbar:%03d, qbeat:%d, qtick:%04d, key:%d\r\n", note.bar, note.beat, note.tick, note.qbar, note.qbeat, note.qtick, note.key);
-else printf ("OFF, bar:%03d, beat:%d, tick:%04d, qbar:%03d, qbeat:%d, qtick:%04d, key:%d\r\n", note.bar, note.beat, note.tick, note.qbar, note.qbeat, note.qtick, note.key);
+//if (note.status == 0x90) printf ("ON , bar:%03d, beat:%d, tick:%04d, qbar:%03d, qbeat:%d, qtick:%04d, key:%d\r\n", note.bar, note.beat, note.tick, note.qbar, note.qbeat, note.qtick, note.key);
+//else printf ("OFF, bar:%03d, beat:%d, tick:%04d, qbar:%03d, qbeat:%d, qtick:%04d, key:%d\r\n", note.bar, note.beat, note.tick, note.qbar, note.qbeat, note.qtick, note.key);
 
 			if (is_record && is_play) {			// record note
 				// write to song, with quantized values
