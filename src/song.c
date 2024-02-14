@@ -221,44 +221,44 @@ void test_copy_paste () {
 
 	cut (0, 1, 1);
 	display_song (song_length, song, "0, 1, 1 test: cut area that does not exist");
-	paste (10, 7);
+	paste (10, 7, PASTE);
 	display_song (song_length, song, "10, 7 test: try to paste bar 10, instr 7");
 
 	cut (3, 4, 1);
 	display_song (song_length, song, "3, 4, 1 test: cut 1st bar that exists but instr does not exist");
-	paste (10, 7);
+	paste (10, 7, PASTE);
 	display_song (song_length, song, "10, 7 test: try to paste bar 10, instr 7");
 
 	cut (3, 4, 2);
 	display_song (song_length, song, "3, 4, 2 test: cut 1st bar that exists and instr does exist");
-	paste (10, 1);
+	paste (10, 1, PASTE);
 	display_song (song_length, song, "10, 1 test: paste bar 10, instr 7");
 
 	cut (4, 5, 7);
 	display_song (song_length, song, "4, 5, 7 test: cut bar that exists and instr does exist");
-	paste (4, 7);
+	paste (4, 7, PASTE);
 	display_song (song_length, song, "4, 7 test: paste same place, same instr");
 
 	cut (4, 5, 2);
 	display_song (song_length, song, "4, 5, 2 test: cut 2 bars in the middle of song");
-	paste (2, 0);
+	paste (2, 0, PASTE);
 	display_song (song_length, song, "2, 0 test: paste 1st bar of song");
 
 	cut (6, 7, 2);
 	display_song (song_length, song, "6, 7, 2 test: cut 2 bars near end of song");
-	paste (5, 1);
+	paste (5, 1, PASTE);
 	display_song (song_length, song, "5, 1 test: paste in middle of song");
 
 	cut (5, 20, 1);
 	display_song (song_length, song, "5, 20, 1 test: cut 3 bars mid of song");
 	display_song (copy_length, copy_buffer, "test: content of copy buffer");
-	paste (30, 2);
+	paste (30, 2, PASTE);
 	display_song (song_length, song, "30, 2 test: paste at end of song");
 
 	cut (29, 31, 2);
 	display_song (song_length, song, "29, 31, 2 test: cut 3 bars near end of song");
 	display_song (copy_length, copy_buffer, "test: content of copy buffer");
-	paste (0, 6);
+	paste (0, 6, PASTE);
 	display_song (song_length, song, "0, 6 test: paste at start of song, bar shall be 1");
 }
 
@@ -492,7 +492,9 @@ void cut (u_int16_t b_limit1, u_int16_t b_limit2, int instr) {
 
 // paste bar functionality. It copies the full copy buffer to b_limit1 (inclusive).
 // at the end of the process, copy_buffer is not emptied
-void paste (u_int16_t b_limit1, int instr) {
+// if mode == PASTE, then destination area is cleared before paste
+// if mode == OVERDUB, then we write on top of destination area (without clearing)
+void paste (u_int16_t b_limit1, int instr, int mode) {
 
 	note_t note;		// temp note
 	int i;
@@ -502,11 +504,11 @@ void paste (u_int16_t b_limit1, int instr) {
 	// this is required to avoid issue with the erasing/deletion of bars
 	if (copy_length == 0) return;
 
-	// erase the content of bars before pasting new stuff: we don't do overdubbing when pasting
-	// you can remove this section to do paste + overdubbing (without erasing bars first)
-	b_limit2 = (copy_buffer [copy_length - 1].qbar) + 1 + b_limit1;		// b_limit2 is last bar in copy buffer + 1 (as it is exclusive)
-	copy_cut (b_limit1, b_limit2, instr, DEL);				// erase corresponding bars in the song
-	// stop removing here
+	if (mode != OVERDUB) {
+		// erase the content of bars before pasting new stuff: we don't do overdubbing when pasting
+		b_limit2 = (copy_buffer [copy_length - 1].qbar) + 1 + b_limit1;		// b_limit2 is last bar in copy buffer + 1 (as it is exclusive)
+		copy_cut (b_limit1, b_limit2, instr, DEL);				// erase corresponding bars in the song
+	}
 
 	for (i=0; i<copy_length; i++) {
 		// take note from copy_buffer and store it in a temporary space

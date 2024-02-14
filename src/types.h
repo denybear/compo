@@ -91,9 +91,10 @@
 #define	CUT			1
 #define DEL			2
 #define PASTE		3
-#define INSERT		4
-#define REMOVE		5
-#define COLOR		6
+#define	OVERDUB		4
+#define INSERT		5
+#define REMOVE		6
+#define COLOR		7
 
 /* transpo values */
 #define PLUS	1

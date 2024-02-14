@@ -365,9 +365,12 @@ int process ( jack_nframes_t nframes, void *arg )
 			bar_process (CUT);
 			break;
 		case NUM_0:	// PASTE
-		case SNUM_0:
 			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
 			bar_process (PASTE);
+			break;
+		case SNUM_0:	// PASTE WITH OVERDUB
+			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes
+			bar_process (OVERDUB);
 			break;
 		case NUM_000:	// COLOR
 		// case SNUM_000:
@@ -836,14 +839,15 @@ void bar_process (int mode) {
 				led_copy_length = j;
 				break;
 			case PASTE:
+			case OVERDUB:
 				// if copy buffer is empty, do nothing
 				if (copy_length == 0) return;
 			
-				paste (blimit1, ui_current_instrument);				// paste from copy buffer
+				paste (blimit1, ui_current_instrument, mode);			// paste from copy buffer
 				// copy color of bars to match what has been copied
 				for (i = 0; i < led_copy_length; i++) {
-					page = (i + blimit1) / 64;									// compute page number
-					bar = (i + blimit1) % 64;									// compute bar number
+					page = (i + blimit1) / 64;							// compute page number
+					bar = (i + blimit1) % 64;							// compute bar number
 					// check we are not out of boundaries
 					if (page < 8) ui_bars [ui_current_instrument][page][bar] = led_copy_buffer [i];
 				}
@@ -885,7 +889,7 @@ void bar_process (int mode) {
 				}
 
 				// then we paste from new position onwards
-				paste (limit2, ui_current_instrument);				// paste from copy buffer
+				paste (limit2, ui_current_instrument, PASTE);		// paste from copy buffer
 				// copy color of bars to match what has been copied
 				for (i = 0; i < led_copy_length; i++) {
 					page = (i + limit2) / 64;						// compute page number
