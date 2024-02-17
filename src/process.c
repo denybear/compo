@@ -252,8 +252,11 @@ int process ( jack_nframes_t nframes, void *arg )
 
 	ch = getch();
 //	flushinp ();	// flush all the other numpad inputs; very useful to avoid key repeats and "000" key issue (which returns C3A0C3A0C3A0)
+//	if (ch!=0xFF) printf ("%02x\n\r", ch);	// debug only
 
 	switch (ch) {
+		case NO_KEY:	//ncurses has detected no keypress
+			break;
 		case NUM_ENTER:	// PLAY
 		case SNUM_ENTER:
 			if ((is_load) || (is_save) || (instrument_bank)) break;		// do not process if in load, save or instr selection modes

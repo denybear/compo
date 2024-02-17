@@ -101,6 +101,7 @@
 #define MINUS 	0
 
 /* num pad */
+#define NO_KEY		0xFF
 #define NUM_0		0x4B
 #define NUM_000		0xC3
 #define NUM_DOT		0x4A
@@ -109,16 +110,16 @@
 #define NUM_3		0x52
 #define	NUM_ENTER	0x57
 #define NUM_4		0x04
-#define NUM_5		0x3E
+#define NUM_5		0x62	// was 0x3E (bulleye OS)
 #define NUM_6		0x05
 #define	NUM_BACK	0x07
 #define NUM_7		0x06
 #define NUM_8		0x03
 #define NUM_9		0x53
-#define	NUM_PLUS	0x3F
-#define NUM_SLASH	0x41
-#define NUM_STAR	0x43
-#define NUM_MINUS	0x44
+#define	NUM_PLUS	0x43	// was 0x3F (bulleye OS)
+#define NUM_SLASH	0x45	// was 0x41 (bulleye OS)
+#define NUM_STAR	0x47	// was 0x43 (bulleye OS)
+#define NUM_MINUS	0x48	// was 0x44 (bulleye OS)
 /* num pad + numlock (shift) */
 #define SNUM_0		0x30
 #define SNUM_000	0xC3
