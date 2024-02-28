@@ -64,7 +64,7 @@ int load (uint8_t name, char * directory) {
 	FILE *fp;
 	int i;
 	char filename [100];		// temp structure for file name
-	char buffer [50000];		// buffer containing json data
+	char buffer [4000000];		// buffer containing json data: let's make it 4Mb
 	int len;
 	cJSON *json;				// used for CJSON writing
 	cJSON *instruments = NULL;
