@@ -39,6 +39,7 @@ static void init_globals (int clear_copy_buffer)
 	memset (kbd_clk_list, 0, LIST_ELT * 3);
 	// empty song structure
 	memset (song, 0, SONG_SIZE * sizeof (note_t));
+	song_length = 0;		// indicates length of the song (highest index in song [])
 	// empty copy_buffer structure and corresponding led structure
 	if (clear_copy_buffer == TRUE) {
 		memset (copy_buffer, 0, COPY_SIZE * sizeof (note_t));
@@ -98,8 +99,6 @@ static void init_globals (int clear_copy_buffer)
 	is_velocity = FALSE;					// velocity on/off (fixed)
 	instrument_bank = 0;					// no instrument bank selected yet
 
-	song_length = 0;		// indicates length of the song (highest index in song [])
-	copy_length = 0;		// length of copy buffer: empty
 	tap1 = 0;				// tap tempo
 	tap2 = 0;
 	color_repeat = 0;
@@ -282,7 +281,7 @@ int main ( int argc, char *argv[] )
 	}
 
 	// init global variables
-	init_globals (TRUE);
+	init_globals (TRUE);	// clear variables + empty copy buffer
 
 	// init ncurses for non-blocking key capture
 	initscr();				// init curses, 
@@ -365,6 +364,7 @@ int main ( int argc, char *argv[] )
 		// check if user has typed the LOAD button to load file and a file is selected
 		if ((is_load) && (file_selected != 0xFF))  {
 			init_globals (FALSE);			// empty song, etc; but keep copy buffer
+
 			if (load (file_selected, DEFAULT_DIR)) set_defaults ();		// load song; if error, then set default volumes & instr
 			else {
 				// set volumes and instruments
