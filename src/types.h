@@ -74,10 +74,11 @@
 #define CLK		3
 #define KBD_CLK	4
 #define SONG_SIZE	20000		// max number of notes for a song
-#define COPY_SIZE	10000		// max number of notes for copy buffer
+#define COPY_SIZE	20000		// max number of notes for copy buffer
+#define JSON_SIZE	4000000		// max number of chars in a Json load file
 
 /* list management (used for led mgmt) */
-#define LIST_ELT 100
+#define LIST_ELT 300
 
 /* quantizer values */
 #define FREE_TIMING		0

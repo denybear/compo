@@ -63,8 +63,8 @@ int load (uint8_t name, char * directory) {
 
 	FILE *fp;
 	int i;
-	char filename [100];		// temp structure for file name
-	char buffer [4000000];		// buffer containing json data: let's make it 4Mb
+	char filename [255];		// temp structure for file name
+	char buffer [JSON_SIZE];	// buffer containing json data
 	int len;
 	cJSON *json;				// used for CJSON writing
 	cJSON *instruments = NULL;
@@ -221,7 +221,7 @@ int save (uint8_t name, char * directory) {
 
 	FILE *fp;
 	int i;
-	char filename [100];		// temp structure for file name
+	char filename [255];		// temp structure for file name
 	cJSON *json;				// used for CJSON writing
 	cJSON *instruments = NULL;
 	cJSON *volumes = NULL;
@@ -309,7 +309,7 @@ end:
 int save_to_midi (uint8_t name, char * directory) {
 	
 	FILE *out;
-	char filename [100];		// temp structure for file name
+	char filename [255];		// temp structure for file name
 	int32_t trackSize = 0;
 	uint8_t trackByte[4] = {0};
 	int	chan, vel;
