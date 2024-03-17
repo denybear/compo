@@ -274,6 +274,12 @@ int quantize_note (int quant_noteon, int quant_noteoff, note_t *note) {
 	found = FALSE;
 	while (i > 0) {
 		i--;
+
+		// if song bar and tick is > current bar and tick of note we want to quantize, then next loop
+		// indeed, we want to position on the note of the song that is "right before" the played note
+		if ((song[i].instrument == note->instrument) && (song[i].qbar > note->bar)) continue; 
+		if ((song[i].instrument == note->instrument) && (song[i].qbar == note->bar) && (song[i].qtick > note->tick)) continue; 
+
 		if (((note->status == MIDI_NOTEON) && (song[i].instrument == note->instrument) && (song[i].status == MIDI_NOTEON)) || 
 			((note->status == MIDI_NOTEOFF) && (song[i].instrument == note->instrument) && (song[i].status == MIDI_NOTEON) && (song[i].key == note->key))){
 			// another note (with same instrument) has been found; leave loop

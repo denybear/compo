@@ -541,6 +541,7 @@ int kbd_midi_in_process (jack_midi_event_t *event, jack_nframes_t nframes) {
 			if (is_record && is_play) {			// record note
 				// write to song, with quantized values
 				write_to_song (note);
+
 				// we have recorded something in the bar : set bar to a color
 				if (ui_bars [ui_current_instrument][note.qbar / 64][note.qbar % 64] == BLACK) {
 					ui_bars [ui_current_instrument][note.qbar / 64][note.qbar % 64] = LO_YELLOW;
@@ -819,6 +820,7 @@ void bar_process (int mode) {
 
 		switch (mode) {
 			case COPY:
+				limit2_paste = blimit2 - blimit1;					// required to delete the right number of bars when pasting
 				copy (blimit1, blimit2, ui_current_instrument);		// copy and put in copy buffer
 				// copy color of bars to specific buffer
 				j = 0;
@@ -830,6 +832,7 @@ void bar_process (int mode) {
 				led_copy_length = j;
 				break;
 			case CUT:
+				limit2_paste = blimit2 - blimit1;					// required to delete the right number of bars when pasting
 				cut (blimit1, blimit2, ui_current_instrument);		// cut and put in copy buffer
 				// copy color of bars to specific buffer and clear bars that have been cut in the UI
 				j = 0;
@@ -846,13 +849,18 @@ void bar_process (int mode) {
 				// if copy buffer is empty, do nothing
 				if (copy_length == 0) return;
 			
-				paste (blimit1, ui_current_instrument, mode);			// paste from copy buffer
+				paste (blimit1, limit2_paste, ui_current_instrument, mode);	// paste from copy buffer
 				// copy color of bars to match what has been copied
 				for (i = 0; i < led_copy_length; i++) {
-					page = (i + blimit1) / 64;							// compute page number
-					bar = (i + blimit1) % 64;							// compute bar number
-					// check we are not out of boundaries
-					if (page < 8) ui_bars [ui_current_instrument][page][bar] = led_copy_buffer [i];
+					page = (i + blimit1) / 64;								// compute page number
+					bar = (i + blimit1) % 64;								// compute bar number
+					// check we are not out of boundaries, then copy led_copy_buffer to regular ui
+					// however, if we are in overdub mode, keep current song color in case copy buffer is black
+					// this avoids having non-lit leds while there are notes in the bar
+					if (page < 8) {
+						if ((mode == OVERDUB) && (led_copy_buffer [i] == BLACK));	// in case of OVERDUB and black in copy buffer, do nothing
+						else ui_bars [ui_current_instrument][page][bar] = led_copy_buffer [i];	// in case of PASTE, we copy the full led copy buffer to ui
+					}
 				}
 				break;
 			case INSERT:
@@ -874,7 +882,7 @@ void bar_process (int mode) {
 				}
 
 				// first we cut all the bars of song from limit (beg or end of selection) position onwards
-				cut (limit1, 512, ui_current_instrument);			// cut and put in copy buffer
+				cut (limit1, 512, ui_current_instrument);			// cut and put in copy buffer; 512 = 64 bars * 8 pages
 				// copy color of bars to specific buffer and clear bars until end of the song
 				j = 0;
 				for (i = limit1; i < 512; i++) {
@@ -888,11 +896,11 @@ void bar_process (int mode) {
 				// specific process for REMOVE: we delete (clear) the bars to be removed
 				// this could be done during paste, except that sometimes there are no notes to be pasted and consequently, the bars are not erased
 				if (mode == REMOVE) {
-					copy_cut (limit2, limit1, ui_current_instrument, DEL);				// erase bars in the song
+					copy_cut (limit2, limit1, ui_current_instrument, DEL);		// erase bars in the song
 				}
 
 				// then we paste from new position onwards
-				paste (limit2, ui_current_instrument, PASTE);		// paste from copy buffer
+				paste (limit2, (512-limit2), ui_current_instrument, PASTE);		// paste from copy buffer; we erase everything to end of song (512 = 8 pages * 64 bars)
 				// copy color of bars to match what has been copied
 				for (i = 0; i < led_copy_length; i++) {
 					page = (i + limit2) / 64;						// compute page number

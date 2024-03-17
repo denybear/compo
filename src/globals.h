@@ -57,6 +57,7 @@ extern int ui_limit1;
 extern int ui_limit2;
 extern int ui_limit1_pressed;
 extern int ui_limit2_pressed;
+extern int limit2_paste;					// end limit of pasting, to make sure we delete the right bars before pasting
 extern uint8_t ui_select [64];				// buffer to store pads during selection process
 extern uint8_t ui_select_previous [64];		// buffer to store pads during selection process (previous selection)
 

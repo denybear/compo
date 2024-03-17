@@ -71,6 +71,7 @@ static void init_globals (int clear_copy_buffer)
 	ui_limit2 = ui_current_bar;
 	ui_limit1_pressed = FALSE;
 	ui_limit2_pressed = FALSE;
+	limit2_paste = 0;
 
 	// timing and tempo
 	time_beats_per_bar = 4.0;
